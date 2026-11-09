@@ -28,3 +28,13 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## Project rules
+
+- Booking validation lives in `src/lib/booking-rules.ts` and runs both in the forms (preview) and in server functions (enforcement); change rules there only, and keep `src/test/booking-rules.test.ts` in sync.
+- Staff sign in with a username mapped to `<username>@staff.isatu-booking.app` (`src/lib/identity.ts`); guests use real emails. Never look up emails by username.
+- Roles live only in `public.user_roles` (admin, venue_admin with facility_id, guest); RLS uses `manages_facility()` so venue admins are scoped to their facility. New accounts always start as guest; staff roles are set by the admin server functions.
+- Booking inserts, owner cancellations and floor-plan saves go through server functions using the service client after checks; the browser has no insert grant on booking tables.
+- Records from the previous system are kept in `legacy_users`; guest bookings link to a new account only after that account's email is confirmed and matches (`getMe`).
+- Floor plans use a fixed 980x620 logical canvas with centered shapes (`src/lib/floor-plan.ts`); the Konva editor is lazy-loaded behind `ClientOnly` because Konva cannot run during SSR.
+- Keep the interface free of emoji; use lucide icons.

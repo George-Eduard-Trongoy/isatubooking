@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1794194444709,
+      "tag": "0000_booking_system_schema_and_data",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794194509615,
+      "tag": "0001_simplify_new_user_trigger",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794195577025,
+      "tag": "0002_limit_blackout_columns",
+      "breakpoints": true
+    }
+  ]
+}

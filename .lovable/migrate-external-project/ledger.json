@@ -1,0 +1,18 @@
+{
+  "source": "code-archive: integrated-booking-system.zip (Express + EJS + SQLite)",
+  "capabilities": [
+    { "capability": "code: public pages (home, venues, rooms)", "source": "views/*.ejs", "outcome": "rebuilt with new design, no emojis", "status": "verified", "next_action": "none" },
+    { "capability": "code: venue booking flow", "source": "server.ts /book_venue", "outcome": "server-enforced rules, tested", "status": "verified", "next_action": "none" },
+    { "capability": "code: room booking flow", "source": "server.ts /book_room", "outcome": "server-enforced rules, tested", "status": "verified", "next_action": "none" },
+    { "capability": "code: 2D floor plan editor", "source": "views/layout_editor.ejs", "outcome": "react-konva editor with working presets and save", "status": "verified", "next_action": "none" },
+    { "capability": "code: my bookings + cancel", "source": "server.ts /my_bookings", "outcome": "rebuilt", "status": "verified", "next_action": "none" },
+    { "capability": "code: admin dashboard", "source": "views/admin.ejs", "outcome": "rebuilt; account management limited to system admin", "status": "verified", "next_action": "none" },
+    { "capability": "schema", "source": "src/db.ts", "outcome": "Lovable Cloud tables with RLS", "status": "verified", "next_action": "none" },
+    { "capability": "records", "source": "data/booking_system.db-wal (recovered)", "outcome": "facilities, venues, 14 room types, 11 rooms, 3 venue bookings, 2 room bookings, 2 blackout ranges imported (1 duplicate dropped); saved floor plans regenerate from booking details", "status": "verified", "next_action": "none" },
+    { "capability": "auth identities", "source": "users table (plaintext passwords)", "outcome": "4 staff accounts recreated with new passwords; 5 guest profiles kept and linked on verified sign-up", "status": "verified", "next_action": "none" },
+    { "capability": "authorization", "source": "requireAdmin / assigned_venue_id", "outcome": "user_roles + facility-scoped RLS; HRT/TLE scoping verified", "status": "verified", "next_action": "none" },
+    { "capability": "secrets", "source": "SESSION_SECRET, README default credentials", "outcome": "removed; no credentials in repo or UI", "status": "verified", "next_action": "none" },
+    { "capability": "external providers", "source": "none (metadata mentions Gemini but no call sites)", "outcome": "none needed", "status": "verified", "next_action": "none" },
+    { "capability": "cutover", "source": "-", "outcome": "publish when ready", "status": "pending", "next_action": "user publishes" }
+  ]
+}

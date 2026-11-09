@@ -10,33 +10,198 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as RoomsRouteImport } from './routes/rooms'
+import { Route as VenuesRouteImport } from './routes/venues'
+import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticated/account'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedMyBookingsRouteImport } from './routes/_authenticated/my-bookings'
+import { Route as AuthenticatedBookRoomRoomIdRouteImport } from './routes/_authenticated/book-room.$roomId'
+import { Route as AuthenticatedBookVenueVenueIdRouteImport } from './routes/_authenticated/book-venue.$venueId'
+import { Route as AuthenticatedFloorPlanBookingIdRouteImport } from './routes/_authenticated/floor-plan.$bookingId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RoomsRoute = RoomsRouteImport.update({
+  id: '/rooms',
+  path: '/rooms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VenuesRoute = VenuesRouteImport.update({
+  id: '/venues',
+  path: '/venues',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAccountRoute = AuthenticatedAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMyBookingsRoute = AuthenticatedMyBookingsRouteImport.update({
+  id: '/my-bookings',
+  path: '/my-bookings',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedBookRoomRoomIdRoute =
+  AuthenticatedBookRoomRoomIdRouteImport.update({
+    id: '/book-room/$roomId',
+    path: '/book-room/$roomId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedBookVenueVenueIdRoute =
+  AuthenticatedBookVenueVenueIdRouteImport.update({
+    id: '/book-venue/$venueId',
+    path: '/book-venue/$venueId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedFloorPlanBookingIdRoute =
+  AuthenticatedFloorPlanBookingIdRouteImport.update({
+    id: '/floor-plan/$bookingId',
+    path: '/floor-plan/$bookingId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/rooms': typeof RoomsRoute
+  '/venues': typeof VenuesRoute
+  '/account': typeof AuthenticatedAccountRoute
+  '/admin': typeof AuthenticatedAdminRoute
+  '/my-bookings': typeof AuthenticatedMyBookingsRoute
+  '/book-room/$roomId': typeof AuthenticatedBookRoomRoomIdRoute
+  '/book-venue/$venueId': typeof AuthenticatedBookVenueVenueIdRoute
+  '/floor-plan/$bookingId': typeof AuthenticatedFloorPlanBookingIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/rooms': typeof RoomsRoute
+  '/venues': typeof VenuesRoute
+  '/account': typeof AuthenticatedAccountRoute
+  '/admin': typeof AuthenticatedAdminRoute
+  '/my-bookings': typeof AuthenticatedMyBookingsRoute
+  '/book-room/$roomId': typeof AuthenticatedBookRoomRoomIdRoute
+  '/book-venue/$venueId': typeof AuthenticatedBookVenueVenueIdRoute
+  '/floor-plan/$bookingId': typeof AuthenticatedFloorPlanBookingIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/rooms': typeof RoomsRoute
+  '/venues': typeof VenuesRoute
+  '/_authenticated/account': typeof AuthenticatedAccountRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/my-bookings': typeof AuthenticatedMyBookingsRoute
+  '/_authenticated/book-room/$roomId': typeof AuthenticatedBookRoomRoomIdRoute
+  '/_authenticated/book-venue/$venueId': typeof AuthenticatedBookVenueVenueIdRoute
+  '/_authenticated/floor-plan/$bookingId': typeof AuthenticatedFloorPlanBookingIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/forgot-password'
+    | '/login'
+    | '/register'
+    | '/reset-password'
+    | '/rooms'
+    | '/venues'
+    | '/account'
+    | '/admin'
+    | '/my-bookings'
+    | '/book-room/$roomId'
+    | '/book-venue/$venueId'
+    | '/floor-plan/$bookingId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/forgot-password'
+    | '/login'
+    | '/register'
+    | '/reset-password'
+    | '/rooms'
+    | '/venues'
+    | '/account'
+    | '/admin'
+    | '/my-bookings'
+    | '/book-room/$roomId'
+    | '/book-venue/$venueId'
+    | '/floor-plan/$bookingId'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/forgot-password'
+    | '/login'
+    | '/register'
+    | '/reset-password'
+    | '/rooms'
+    | '/venues'
+    | '/_authenticated/account'
+    | '/_authenticated/admin'
+    | '/_authenticated/my-bookings'
+    | '/_authenticated/book-room/$roomId'
+    | '/_authenticated/book-venue/$venueId'
+    | '/_authenticated/floor-plan/$bookingId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
+  LoginRoute: typeof LoginRoute
+  RegisterRoute: typeof RegisterRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  RoomsRoute: typeof RoomsRoute
+  VenuesRoute: typeof VenuesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +213,130 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rooms': {
+      id: '/rooms'
+      path: '/rooms'
+      fullPath: '/rooms'
+      preLoaderRoute: typeof RoomsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/venues': {
+      id: '/venues'
+      path: '/venues'
+      fullPath: '/venues'
+      preLoaderRoute: typeof VenuesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/account': {
+      id: '/_authenticated/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AuthenticatedAccountRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/my-bookings': {
+      id: '/_authenticated/my-bookings'
+      path: '/my-bookings'
+      fullPath: '/my-bookings'
+      preLoaderRoute: typeof AuthenticatedMyBookingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/book-room/$roomId': {
+      id: '/_authenticated/book-room/$roomId'
+      path: '/book-room/$roomId'
+      fullPath: '/book-room/$roomId'
+      preLoaderRoute: typeof AuthenticatedBookRoomRoomIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/book-venue/$venueId': {
+      id: '/_authenticated/book-venue/$venueId'
+      path: '/book-venue/$venueId'
+      fullPath: '/book-venue/$venueId'
+      preLoaderRoute: typeof AuthenticatedBookVenueVenueIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/floor-plan/$bookingId': {
+      id: '/_authenticated/floor-plan/$bookingId'
+      path: '/floor-plan/$bookingId'
+      fullPath: '/floor-plan/$bookingId'
+      preLoaderRoute: typeof AuthenticatedFloorPlanBookingIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAccountRoute: typeof AuthenticatedAccountRoute
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedMyBookingsRoute: typeof AuthenticatedMyBookingsRoute
+  AuthenticatedBookRoomRoomIdRoute: typeof AuthenticatedBookRoomRoomIdRoute
+  AuthenticatedBookVenueVenueIdRoute: typeof AuthenticatedBookVenueVenueIdRoute
+  AuthenticatedFloorPlanBookingIdRoute: typeof AuthenticatedFloorPlanBookingIdRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAccountRoute: AuthenticatedAccountRoute,
+  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedMyBookingsRoute: AuthenticatedMyBookingsRoute,
+  AuthenticatedBookRoomRoomIdRoute: AuthenticatedBookRoomRoomIdRoute,
+  AuthenticatedBookVenueVenueIdRoute: AuthenticatedBookVenueVenueIdRoute,
+  AuthenticatedFloorPlanBookingIdRoute: AuthenticatedFloorPlanBookingIdRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  ForgotPasswordRoute: ForgotPasswordRoute,
+  LoginRoute: LoginRoute,
+  RegisterRoute: RegisterRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  RoomsRoute: RoomsRoute,
+  VenuesRoute: VenuesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
