@@ -360,15 +360,19 @@ export const saveDocumentRequirement = createServerFn({ method: "POST" })
     const allowed = await requireVenueManager(context, data.venueId);
     if (!allowed.ok) return allowed;
     const sb = await admin();
-    const patch: Record<string, unknown> = { title: data.title.trim(), description: data.description.trim(), updated_at: new Date().toISOString() };
+    const patch: { title: string; description: string; updated_at: string; template_path?: string; template_name?: string } = {
+      title: data.title.trim(),
+      description: data.description.trim(),
+      updated_at: new Date().toISOString(),
+    };
     if (data.templatePath) {
       const prefix = `venue-${data.venueId}/`;
       if (!data.templatePath.startsWith(prefix) || data.templatePath.includes("..")) return { ok: false, message: "Upload the file again." };
       const name = data.templatePath.slice(prefix.length);
       const { data: listed } = await sb.storage.from(TEMPLATES).list(`venue-${data.venueId}`, { search: name, limit: 5 });
       if (!(listed ?? []).some((o) => o.name === name)) return { ok: false, message: "The file did not finish uploading. Please try again." };
-      patch["template_path"] = data.templatePath;
-      patch["template_name"] = safeName(data.templateName ?? name);
+      patch.template_path = data.templatePath;
+      patch.template_name = safeName(data.templateName ?? name);
     }
     if (data.id) {
       // RLS: managers can only update requirements of venues they manage.
