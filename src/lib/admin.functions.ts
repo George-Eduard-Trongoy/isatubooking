@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { BOOKING_STATUSES } from "./booking-rules";
-import { isStaffEmail, normalizeUsername, staffEmailFor, type AppRole } from "./identity";
+import { isStaffEmail, normalizeUsername, resolveNewAccountRole, staffEmailFor, type AppRole } from "./identity";
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; message: string };
 type Ctx = { supabase: any; userId: string };
@@ -200,7 +200,9 @@ export const updateCatalogItem = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// ---------- Accounts (system administrator only) ----------
+// ---------- Accounts ----------
+// Any admin can list and create accounts (facility admins within their facility);
+// editing and deleting stay with the system administrator.
 
 export type ManagedUser = {
   id: string;
@@ -215,7 +217,7 @@ export type ManagedUser = {
 export const listUsers = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await requireSuperAdmin(context);
+    const scope = await requireStaff(context);
     const [p, r, l] = await Promise.all([
       context.supabase.from("profiles").select("id, username, full_name, email, created_at").order("created_at"),
       context.supabase.from("user_roles").select("user_id, role, facility_id"),
@@ -227,11 +229,15 @@ export const listUsers = createServerFn({ method: "POST" })
       const cur = roleMap.get(row.user_id);
       if (!cur || (rank[row.role] ?? 0) > (rank[cur.role] ?? 0)) roleMap.set(row.user_id, { role: row.role, facility_id: row.facility_id });
     }
-    const users: ManagedUser[] = ((p.data ?? []) as any[]).map((u) => ({
+    const all: ManagedUser[] = ((p.data ?? []) as any[]).map((u) => ({
       ...u,
       role: roleMap.get(u.id)?.role ?? "guest",
       facility_id: roleMap.get(u.id)?.facility_id ?? null,
     }));
+    // Facility admins see guests and their own facility's staff only.
+    const users = scope.role === "admin"
+      ? all
+      : all.filter((u) => u.role === "guest" || (u.role === "venue_admin" && u.facility_id === scope.facilityId));
     const pending = ((l.data ?? []) as any[]).filter((x) => x.role === "guest");
     return { users, pendingImported: pending as { id: number; full_name: string; email: string | null }[] };
   });
@@ -254,10 +260,12 @@ export const createUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: z.input<typeof userInput>) => userInput.parse(d))
   .handler(async ({ data, context }): Promise<Result> => {
-    await requireSuperAdmin(context);
+    const scope = await requireStaff(context);
+    const allowed = resolveNewAccountRole(scope, { role: data.role, facilityId: data.facility_id });
+    if (!allowed.ok) return allowed;
+    data.facility_id = allowed.facilityId;
     const password = data.password ?? "";
     if (password.length < 10) return { ok: false, message: "Passwords need at least 10 characters." };
-    if (data.role === "venue_admin" && !data.facility_id) return { ok: false, message: "Choose the facility this admin manages." };
 
     let email: string;
     let username: string | null = null;

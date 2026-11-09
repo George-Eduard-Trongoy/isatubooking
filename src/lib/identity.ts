@@ -29,3 +29,22 @@ export function roleLabel(role: AppRole, facilityCode?: string | null): string {
   if (role === "venue_admin") return facilityCode ? `${facilityCode} Admin` : "Venue Admin";
   return "Guest";
 }
+
+/**
+ * Which account a staff member may create. System admins may create any role.
+ * Facility admins may create guests and admins for their own facility only.
+ * Returns the facility to store, or an error message.
+ */
+export function resolveNewAccountRole(
+  creator: { role: AppRole; facilityId: number | null },
+  requested: { role: AppRole; facilityId: number | null },
+): { ok: true; facilityId: number | null } | { ok: false; message: string } {
+  if (creator.role === "guest") return { ok: false, message: "Administrator access required." };
+  if (creator.role === "venue_admin" && requested.role === "admin") {
+    return { ok: false, message: "Only the system administrator can create system administrator accounts." };
+  }
+  if (requested.role !== "venue_admin") return { ok: true, facilityId: null };
+  const facilityId = creator.role === "venue_admin" ? creator.facilityId : requested.facilityId;
+  if (!facilityId) return { ok: false, message: "Choose the facility this admin manages." };
+  return { ok: true, facilityId };
+}

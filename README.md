@@ -9,10 +9,11 @@ Venue and accommodation booking for the ISATU HRT Center and TLE Service Center.
 - Campus guest rooms with stay-date calendar and special requests.
 - Guest accounts (email sign-in with confirmation and password reset).
 - Facility-scoped administration: booking approvals, unavailable dates, photos and pricing.
-- System administrator account management.
+- Account creation for all administrators; editing and removal by the system administrator.
 
 ## Accounts
 
 Staff sign in with their assigned username; guests sign in with their email address.
-Credentials are never stored in this repository. The system administrator creates and resets
-staff accounts from the Admin dashboard.
+Credentials are never stored in this repository. Any administrator can create accounts from the
+Accounts tab of the Admin dashboard: facility admins can add guests and admins for their own
+facility, while the system administrator can add any account and edit, reset or remove accounts.

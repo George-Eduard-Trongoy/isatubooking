@@ -91,12 +91,12 @@ function AdminPage() {
           <TabsTrigger value="bookings" className="px-4 py-2">Booking requests</TabsTrigger>
           <TabsTrigger value="blackouts" className="px-4 py-2">Unavailable dates</TabsTrigger>
           <TabsTrigger value="catalog" className="px-4 py-2">Photos and details</TabsTrigger>
-          {superAdmin && <TabsTrigger value="users" className="px-4 py-2">Accounts</TabsTrigger>}
+          <TabsTrigger value="users" className="px-4 py-2">Accounts</TabsTrigger>
         </TabsList>
         <TabsContent value="bookings" className="mt-6"><BookingsPanel d={d} /></TabsContent>
         <TabsContent value="blackouts" className="mt-6"><BlackoutsPanel d={d} /></TabsContent>
         <TabsContent value="catalog" className="mt-6"><CatalogPanel d={d} /></TabsContent>
-        {superAdmin && <TabsContent value="users" className="mt-6"><UsersPanel facilities={d.facilities} selfId={me!.id} /></TabsContent>}
+        <TabsContent value="users" className="mt-6"><UsersPanel facilities={d.facilities} selfId={me!.id} superAdmin={superAdmin} facilityId={d.scope.facilityId} /></TabsContent>
       </Tabs>
     </div>
   );
@@ -365,7 +365,7 @@ function CatalogDialog({ target, onClose }: { target: CatalogTarget; onClose: ()
 
 // ---------- Accounts ----------
 
-function UsersPanel({ facilities, selfId }: { facilities: Dashboard["facilities"]; selfId: string }) {
+function UsersPanel({ facilities, selfId, superAdmin, facilityId }: { facilities: Dashboard["facilities"]; selfId: string; superAdmin: boolean; facilityId: number | null }) {
   const fetchUsers = useServerFn(listUsers);
   const users = useQuery({ queryKey: ["admin-users"], queryFn: () => fetchUsers() });
   const remove = useServerFn(deleteUser);
@@ -379,7 +379,7 @@ function UsersPanel({ facilities, selfId }: { facilities: Dashboard["facilities"
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">Staff sign in with a username. Guests sign in with their email address.</p>
+        <p className="text-sm text-muted-foreground">Staff sign in with a username. Guests sign in with their email address.{!superAdmin && " Contact the system administrator to edit or remove an account."}</p>
         <Button variant="gold" onClick={() => setEditing("new")}><UserPlus /> Add account</Button>
       </div>
       <TableShell>
@@ -392,8 +392,8 @@ function UsersPanel({ facilities, selfId }: { facilities: Dashboard["facilities"
               <td className={td}><span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold">{roleLabel(u.role, fcode(u.facility_id))}</span></td>
               <td className={`${td} text-muted-foreground`}>{formatDate(u.created_at.slice(0, 10))}</td>
               <td className={`${td} text-right`}>
-                <Button size="icon" variant="ghost" onClick={() => setEditing(u)} aria-label="Edit"><Pencil /></Button>
-                {u.id !== selfId && (
+                {superAdmin && <Button size="icon" variant="ghost" onClick={() => setEditing(u)} aria-label="Edit"><Pencil /></Button>}
+                {superAdmin && u.id !== selfId && (
                   <Button size="icon" variant="ghost" aria-label="Delete" onClick={async () => {
                     if (!window.confirm(`Delete the account for ${u.full_name}?`)) return;
                     const res = await remove({ data: { id: u.id } });
@@ -418,12 +418,12 @@ function UsersPanel({ facilities, selfId }: { facilities: Dashboard["facilities"
         </div>
       )}
 
-      {editing && <UserDialog user={editing === "new" ? null : editing} facilities={facilities} selfId={selfId} onClose={() => setEditing(null)} />}
+      {editing && <UserDialog user={editing === "new" ? null : editing} facilities={superAdmin ? facilities : facilities.filter((f) => f.id === facilityId)} selfId={selfId} superAdmin={superAdmin} onClose={() => setEditing(null)} />}
     </div>
   );
 }
 
-function UserDialog({ user, facilities, selfId, onClose }: { user: ManagedUser | null; facilities: Dashboard["facilities"]; selfId: string; onClose: () => void }) {
+function UserDialog({ user, facilities, selfId, superAdmin, onClose }: { user: ManagedUser | null; facilities: Dashboard["facilities"]; selfId: string; superAdmin: boolean; onClose: () => void }) {
   const create = useServerFn(createUser);
   const update = useServerFn(updateUser);
   const qc = useQueryClient();
@@ -472,7 +472,7 @@ function UserDialog({ user, facilities, selfId, onClose }: { user: ManagedUser |
               <Select value={role} onValueChange={(v) => setRole(v as AppRole)} disabled={user?.id === selfId}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">System Admin</SelectItem>
+                  {superAdmin && <SelectItem value="admin">System Admin</SelectItem>}
                   <SelectItem value="venue_admin">Venue Admin</SelectItem>
                   <SelectItem value="guest">Guest</SelectItem>
                 </SelectContent>
@@ -481,7 +481,7 @@ function UserDialog({ user, facilities, selfId, onClose }: { user: ManagedUser |
             {role === "venue_admin" && (
               <div className="space-y-2">
                 <Label>Facility</Label>
-                <Select value={facilityId} onValueChange={setFacilityId}>
+                <Select value={facilityId} onValueChange={setFacilityId} disabled={!superAdmin}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{facilities.map((f) => <SelectItem key={f.id} value={String(f.id)}>{f.name}</SelectItem>)}</SelectContent>
                 </Select>
