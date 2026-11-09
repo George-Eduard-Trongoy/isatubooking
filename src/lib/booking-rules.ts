@@ -182,6 +182,79 @@ export function venueBlockedDates(
   return [...set];
 }
 
+// ---------- Room payments ----------
+
+export const PAYMENT_METHODS = [
+  { value: "pay_at_desk", label: "Pay at the front desk", detail: "Settle the bill in cash or card when you check in." },
+  { value: "sandbox", label: "Sandbox online wallet", detail: "Pay now with the Sandbox e-wallet. This is a test wallet and no real money moves." },
+] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number]["value"];
+export const PAYMENT_STATUSES = ["unpaid", "paid", "refunded"] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+
+export function isPaymentMethod(v: string): v is PaymentMethod {
+  return PAYMENT_METHODS.some((m) => m.value === v);
+}
+
+/** Room bill: nightly rate times nights, with a one-night minimum. */
+export function roomTotal(pricePerNight: number, checkIn: string, checkOut: string): number {
+  const nights = Math.max(1, daysBetween(checkIn, checkOut));
+  return Math.round(Number(pricePerNight) * nights * 100) / 100;
+}
+
+/** Only open, unpaid reservations can be paid online. */
+export function canPayOnline(b: { status: string; payment_status: string }): boolean {
+  return (b.status === "pending" || b.status === "approved") && b.payment_status === "unpaid";
+}
+
+/** Sandbox wallet accounts use a Philippine mobile number: 11 digits starting with 09. */
+export function validateSandboxAccount(mobile: string): string | null {
+  const digits = mobile.replace(/[\s-]/g, "");
+  return /^09\d{9}$/.test(digits) ? null : "Enter the 11-digit mobile number of your Sandbox wallet, starting with 09.";
+}
+
+/** Payment status after a booking is cancelled or rejected: paid bills are refunded. */
+export function paymentStatusAfterClosing(paymentStatus: string): string {
+  return paymentStatus === "paid" ? "refunded" : paymentStatus;
+}
+
+// ---------- Venue documents ----------
+
+export const MAX_DOCUMENT_PAGES = 5;
+export const DOCUMENT_STATUSES = ["pending", "approved", "rejected"] as const;
+export type DocumentStatus = (typeof DOCUMENT_STATUSES)[number];
+
+/** Clients may upload documents while the booking is open; approved documents are locked. */
+export function canUploadDocument(bookingStatus: string, submissionStatus: string | null): string | null {
+  if (bookingStatus === "cancelled" || bookingStatus === "rejected") return "This booking is closed, so documents can no longer be uploaded.";
+  if (submissionStatus === "approved") return "This document has already been verified.";
+  return null;
+}
+
+export function validateDocumentPages(files: { type: string; size: number }[]): string | null {
+  if (files.length === 0) return "Add at least one photo of the document.";
+  if (files.length > MAX_DOCUMENT_PAGES) return `Upload at most ${MAX_DOCUMENT_PAGES} photos per document.`;
+  if (files.some((f) => !/^image\/(jpeg|png|webp|heic|heif)$/.test(f.type))) return "Upload photos in JPG, PNG, WEBP or HEIC format.";
+  if (files.some((f) => f.size > 10 * 1024 * 1024)) return "Each photo must be 10 MB or smaller.";
+  return null;
+}
+
+export type DocumentSummary = { total: number; approved: number; pending: number; rejected: number; missing: number; complete: boolean };
+
+export function summarizeDocuments(requirementIds: (number | string)[], submissions: { requirement_id: number | string; status: string }[]): DocumentSummary {
+  const byReq = new Map(submissions.map((s) => [String(s.requirement_id), s.status]));
+  const s: DocumentSummary = { total: requirementIds.length, approved: 0, pending: 0, rejected: 0, missing: 0, complete: false };
+  for (const id of requirementIds) {
+    const st = byReq.get(String(id));
+    if (st === "approved") s.approved++;
+    else if (st === "pending") s.pending++;
+    else if (st === "rejected") s.rejected++;
+    else s.missing++;
+  }
+  s.complete = s.total > 0 && s.approved === s.total;
+  return s;
+}
+
 export function formatPeso(value: number): string {
   return `PHP ${Number(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

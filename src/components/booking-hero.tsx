@@ -35,8 +35,8 @@ export function BookingHero({
   );
 }
 
-export function StepIndicator({ step }: { step: 1 | 2 }) {
-  const steps = ["Event details", "Floor plan"];
+export function StepIndicator({ step }: { step: 1 | 2 | 3 }) {
+  const steps = ["Event details", "Floor plan", "Documents"];
   return (
     <ol className="flex items-center gap-3 text-sm">
       {steps.map((s, i) => {

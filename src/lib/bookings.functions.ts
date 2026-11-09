@@ -1,7 +1,16 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { validateRoomRequest, validateVenueRequest } from "./booking-rules";
+import {
+  canPayOnline,
+  paymentStatusAfterClosing,
+  roomTotal,
+  summarizeDocuments,
+  validateRoomRequest,
+  validateSandboxAccount,
+  validateVenueRequest,
+  type DocumentSummary,
+} from "./booking-rules";
 import { generateRecommendedLayout, normalizePlan, type FloorPlan } from "./floor-plan";
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; message: string };
@@ -69,6 +78,7 @@ const roomInput = z.object({
   check_out: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   guests: z.number().int(),
   special_orders: z.string().max(1000).default(""),
+  payment_method: z.enum(["pay_at_desk", "sandbox"]).default("pay_at_desk"),
 });
 
 export const createRoomBooking = createServerFn({ method: "POST" })
@@ -78,7 +88,7 @@ export const createRoomBooking = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: room } = await supabaseAdmin
       .from("rooms")
-      .select("id, capacity, status, room_number")
+      .select("id, capacity, status, room_number, price_per_night")
       .eq("id", data.room_id)
       .maybeSingle();
     if (!room || room.status !== "available") return { ok: false, message: "Room not found." };
@@ -96,6 +106,9 @@ export const createRoomBooking = createServerFn({ method: "POST" })
         guests: data.guests,
         special_orders: data.special_orders.trim(),
         status: "pending",
+        payment_method: data.payment_method,
+        payment_status: "unpaid",
+        amount_due: roomTotal(Number(room.price_per_night), data.check_in, data.check_out),
       })
       .select("id")
       .single();
@@ -116,6 +129,7 @@ export type MyVenueBooking = {
   venue_name: string;
   facility_name: string;
   created_at: string;
+  documents: DocumentSummary;
 };
 export type MyRoomBooking = {
   id: number;
@@ -129,24 +143,30 @@ export type MyRoomBooking = {
   facility_name: string;
   price_per_night: number;
   created_at: string;
+  payment_method: string;
+  payment_status: string;
+  amount_due: number;
+  payment_reference: string | null;
 };
 
 export const getMyBookings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const [v, r] = await Promise.all([
+    const [v, r, reqs] = await Promise.all([
       supabase
         .from("venue_bookings")
-        .select("id, event_name, booking_date, end_date, start_time, end_time, attendees, layout_type, status, created_at, venues(name, facilities(name))")
+        .select("id, venue_id, event_name, booking_date, end_date, start_time, end_time, attendees, layout_type, status, created_at, venues(name, facilities(name)), venue_document_submissions(requirement_id, status)")
         .eq("user_id", userId)
         .order("id", { ascending: false }),
       supabase
         .from("room_bookings")
-        .select("id, check_in, check_out, guests, special_orders, status, created_at, rooms(room_number, price_per_night, facilities(name), room_types(name))")
+        .select("id, check_in, check_out, guests, special_orders, status, created_at, payment_method, payment_status, amount_due, payment_reference, rooms(room_number, price_per_night, facilities(name), room_types(name))")
         .eq("user_id", userId)
         .order("id", { ascending: false }),
+      supabase.from("venue_document_requirements").select("id, venue_id").eq("active", true),
     ]);
+    const reqIds = (venueId: number) => ((reqs.data ?? []) as { id: number; venue_id: number }[]).filter((x) => x.venue_id === venueId).map((x) => x.id);
     const venue: MyVenueBooking[] = (v.data ?? []).map((b: any) => ({
       id: b.id,
       event_name: b.event_name,
@@ -160,6 +180,7 @@ export const getMyBookings = createServerFn({ method: "POST" })
       venue_name: b.venues?.name ?? "",
       facility_name: b.venues?.facilities?.name ?? "",
       created_at: b.created_at,
+      documents: summarizeDocuments(reqIds(b.venue_id), b.venue_document_submissions ?? []),
     }));
     const room: MyRoomBooking[] = (r.data ?? []).map((b: any) => ({
       id: b.id,
@@ -173,6 +194,10 @@ export const getMyBookings = createServerFn({ method: "POST" })
       facility_name: b.rooms?.facilities?.name ?? "",
       price_per_night: Number(b.rooms?.price_per_night ?? 0),
       created_at: b.created_at,
+      payment_method: b.payment_method,
+      payment_status: b.payment_status,
+      amount_due: Number(b.amount_due ?? 0),
+      payment_reference: b.payment_reference ?? null,
     }));
     return { venue, room };
   });
@@ -187,14 +212,16 @@ export const cancelBooking = createServerFn({ method: "POST" })
     // RLS limits this read to the caller's own bookings (or bookings they manage).
     const { data: b } = await context.supabase
       .from(table)
-      .select("id, user_id, status")
+      .select("*")
       .eq("id", data.id)
       .maybeSingle();
     if (!b || b.user_id !== context.userId) return { ok: false, message: "Booking not found." };
     if (b.status === "cancelled") return { ok: false, message: "This booking is already cancelled." };
     if (b.status === "rejected") return { ok: false, message: "Rejected bookings cannot be cancelled." };
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from(table).update({ status: "cancelled" }).eq("id", data.id);
+    const patch: { status: string; payment_status?: string } = { status: "cancelled" };
+    if (data.type === "room") patch.payment_status = paymentStatusAfterClosing(String((b as any).payment_status ?? "unpaid"));
+    const { error } = await supabaseAdmin.from(table).update(patch as any).eq("id", data.id);
     if (error) return { ok: false, message: "Could not cancel the booking." };
     return { ok: true };
   });
@@ -291,4 +318,93 @@ export const saveFloorPlan = createServerFn({ method: "POST" })
       .eq("id", data.id);
     if (error) return { ok: false, message: "Could not save the floor plan." };
     return { ok: true };
+  });
+
+// ---------- Room payments (mock "Sandbox" online wallet) ----------
+
+export type RoomCheckout = {
+  id: number;
+  room_number: string;
+  room_type: string;
+  facility_name: string;
+  check_in: string;
+  check_out: string;
+  guests: number;
+  status: string;
+  payment_method: string;
+  payment_status: string;
+  amount_due: number;
+  payment_reference: string | null;
+  paid_at: string | null;
+};
+
+export const getRoomCheckout = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: number }) => z.object({ id: z.number().int().positive() }).parse(d))
+  .handler(async ({ data, context }): Promise<RoomCheckout | null> => {
+    const { data: b } = await context.supabase
+      .from("room_bookings")
+      .select("id, user_id, check_in, check_out, guests, status, payment_method, payment_status, amount_due, payment_reference, paid_at, rooms(room_number, price_per_night, facilities(name), room_types(name))")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (!b || b.user_id !== context.userId) return null;
+    const room = (b as any).rooms;
+    const amount = Number(b.amount_due) > 0 ? Number(b.amount_due) : roomTotal(Number(room?.price_per_night ?? 0), b.check_in, b.check_out);
+    return {
+      id: b.id,
+      room_number: room?.room_number ?? "",
+      room_type: room?.room_types?.name ?? "Standard Room",
+      facility_name: room?.facilities?.name ?? "",
+      check_in: b.check_in,
+      check_out: b.check_out,
+      guests: b.guests,
+      status: b.status,
+      payment_method: b.payment_method,
+      payment_status: b.payment_status,
+      amount_due: amount,
+      payment_reference: b.payment_reference,
+      paid_at: b.paid_at,
+    };
+  });
+
+function sandboxReference(): string {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = crypto.getRandomValues(new Uint8Array(10));
+  return `SBX-${Array.from(bytes, (x) => alphabet[x % alphabet.length]).join("")}`;
+}
+
+export const paySandbox = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: number; mobile: string }) =>
+    z.object({ id: z.number().int().positive(), mobile: z.string().max(20) }).parse(d),
+  )
+  .handler(async ({ data, context }): Promise<Result<{ reference: string }>> => {
+    const accountError = validateSandboxAccount(data.mobile);
+    if (accountError) return { ok: false, message: accountError };
+    const { data: b } = await context.supabase
+      .from("room_bookings")
+      .select("id, user_id, check_in, check_out, status, payment_status, amount_due, rooms(price_per_night)")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (!b || b.user_id !== context.userId) return { ok: false, message: "Reservation not found." };
+    if (!canPayOnline(b)) {
+      return { ok: false, message: b.payment_status === "paid" ? "This reservation is already paid." : "This reservation can no longer be paid." };
+    }
+    const amount = roomTotal(Number((b as any).rooms?.price_per_night ?? 0), b.check_in, b.check_out);
+    const reference = sandboxReference();
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("room_bookings")
+      .update({
+        payment_method: "sandbox",
+        payment_status: "paid",
+        amount_due: amount,
+        payment_reference: reference,
+        paid_at: new Date().toISOString(),
+      })
+      .eq("id", b.id)
+      .eq("payment_status", "unpaid")
+      .select("id");
+    if (error || !rows?.length) return { ok: false, message: "The payment could not be completed. You were not charged." };
+    return { ok: true, reference };
   });

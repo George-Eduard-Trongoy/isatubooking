@@ -1,27 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { BOOKING_STATUSES } from "./booking-rules";
+import { BOOKING_STATUSES, summarizeDocuments } from "./booking-rules";
 import { isStaffEmail, normalizeUsername, resolveNewAccountRole, staffEmailFor, type AppRole } from "./identity";
+import { requireStaff, staffScope, type Ctx } from "./staff-scope";
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; message: string };
-type Ctx = { supabase: any; userId: string };
-
-async function staffScope(ctx: Ctx): Promise<{ role: AppRole; facilityId: number | null } | null> {
-  const { data } = await ctx.supabase.from("user_roles").select("role, facility_id").eq("user_id", ctx.userId);
-  const rows = (data ?? []) as { role: AppRole; facility_id: number | null }[];
-  const admin = rows.find((r) => r.role === "admin");
-  if (admin) return { role: "admin", facilityId: null };
-  const va = rows.find((r) => r.role === "venue_admin");
-  if (va) return { role: "venue_admin", facilityId: va.facility_id };
-  return null;
-}
-
-async function requireStaff(ctx: Ctx) {
-  const scope = await staffScope(ctx);
-  if (!scope) throw new Error("Administrator access required.");
-  return scope;
-}
 
 async function requireSuperAdmin(ctx: Ctx) {
   const scope = await staffScope(ctx);
@@ -36,20 +20,30 @@ export const getAdminDashboard = createServerFn({ method: "POST" })
     const sb = context.supabase;
 
     // RLS already limits every query below to the caller's facility scope.
-    const [vb, rb, venues, rooms, blackouts, facilities] = await Promise.all([
+    const [vb, rb, venues, rooms, blackouts, facilities, reqs, subs] = await Promise.all([
       sb
         .from("venue_bookings")
         .select("id, user_id, legacy_user_id, event_name, booking_date, end_date, start_time, end_time, attendees, layout_type, status, created_at, venue_id, venues(name, facility_id)")
         .order("id", { ascending: false }),
       sb
         .from("room_bookings")
-        .select("id, user_id, legacy_user_id, check_in, check_out, guests, special_orders, status, created_at, room_id, rooms(room_number, facility_id, room_types(name))")
+        .select("id, user_id, legacy_user_id, check_in, check_out, guests, special_orders, status, created_at, room_id, payment_method, payment_status, amount_due, payment_reference, rooms(room_number, facility_id, room_types(name))")
         .order("id", { ascending: false }),
       sb.from("venues").select("*").order("id"),
       sb.from("rooms").select("*, room_types(name)").order("facility_id").order("room_number"),
       sb.from("blackout_dates").select("id, venue_id, start_date, end_date, reason, venues(name, facility_id)").order("start_date", { ascending: false }),
       sb.from("facilities").select("id, name, code").order("id"),
+      sb.from("venue_document_requirements").select("id, venue_id").eq("active", true),
+      sb.from("venue_document_submissions").select("booking_id, requirement_id, status"),
     ]);
+    const reqIdsByVenue = new Map<number, number[]>();
+    for (const r of (reqs.data ?? []) as { id: number; venue_id: number }[]) {
+      reqIdsByVenue.set(r.venue_id, [...(reqIdsByVenue.get(r.venue_id) ?? []), r.id]);
+    }
+    const subsByBooking = new Map<number, { requirement_id: number; status: string }[]>();
+    for (const s of (subs.data ?? []) as { booking_id: number; requirement_id: number; status: string }[]) {
+      subsByBooking.set(s.booking_id, [...(subsByBooking.get(s.booking_id) ?? []), s]);
+    }
 
     const inScope = (fid: number | null | undefined) =>
       scope.role === "admin" || (fid != null && fid === scope.facilityId);
@@ -88,6 +82,7 @@ export const getAdminDashboard = createServerFn({ method: "POST" })
         layout_type: b.layout_type as string,
         status: b.status as string,
         venue_name: (b.venues?.name ?? "") as string,
+        documents: summarizeDocuments(reqIdsByVenue.get(b.venue_id) ?? [], subsByBooking.get(b.id) ?? []),
       })),
       roomBookings: roomBookings.map((b: any) => ({
         id: b.id as number,
@@ -99,6 +94,10 @@ export const getAdminDashboard = createServerFn({ method: "POST" })
         status: b.status as string,
         room_number: (b.rooms?.room_number ?? "") as string,
         room_type: (b.rooms?.room_types?.name ?? "Standard") as string,
+        payment_method: b.payment_method as string,
+        payment_status: b.payment_status as string,
+        amount_due: Number(b.amount_due ?? 0),
+        payment_reference: (b.payment_reference ?? null) as string | null,
       })),
       venues: (venues.data ?? [])
         .filter((v: any) => inScope(v.facility_id))
@@ -127,6 +126,10 @@ export const updateBookingStatus = createServerFn({ method: "POST" })
     // RLS rejects updates outside the caller's facility.
     const { data: rows, error } = await context.supabase.from(table).update({ status: data.status }).eq("id", data.id).select("id");
     if (error || !rows?.length) return { ok: false, message: "This booking is managed by another administrator." };
+    // Sandbox payments are refunded when a room booking is closed.
+    if (data.type === "room" && (data.status === "rejected" || data.status === "cancelled")) {
+      await context.supabase.from("room_bookings").update({ payment_status: "refunded" }).eq("id", data.id).eq("payment_status", "paid");
+    }
     return { ok: true };
   });
 

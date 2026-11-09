@@ -22,6 +22,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedMyBookingsRouteImport } from './routes/_authenticated/my-bookings'
 import { Route as AuthenticatedBookRoomRoomIdRouteImport } from './routes/_authenticated/book-room.$roomId'
 import { Route as AuthenticatedBookVenueVenueIdRouteImport } from './routes/_authenticated/book-venue.$venueId'
+import { Route as AuthenticatedDocumentsBookingIdRouteImport } from './routes/_authenticated/documents.$bookingId'
 import { Route as AuthenticatedFloorPlanBookingIdRouteImport } from './routes/_authenticated/floor-plan.$bookingId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -90,6 +91,12 @@ const AuthenticatedBookVenueVenueIdRoute =
     path: '/book-venue/$venueId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedDocumentsBookingIdRoute =
+  AuthenticatedDocumentsBookingIdRouteImport.update({
+    id: '/documents/$bookingId',
+    path: '/documents/$bookingId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedFloorPlanBookingIdRoute =
   AuthenticatedFloorPlanBookingIdRouteImport.update({
     id: '/floor-plan/$bookingId',
@@ -110,6 +117,7 @@ export interface FileRoutesByFullPath {
   '/my-bookings': typeof AuthenticatedMyBookingsRoute
   '/book-room/$roomId': typeof AuthenticatedBookRoomRoomIdRoute
   '/book-venue/$venueId': typeof AuthenticatedBookVenueVenueIdRoute
+  '/documents/$bookingId': typeof AuthenticatedDocumentsBookingIdRoute
   '/floor-plan/$bookingId': typeof AuthenticatedFloorPlanBookingIdRoute
 }
 export interface FileRoutesByTo {
@@ -125,6 +133,7 @@ export interface FileRoutesByTo {
   '/my-bookings': typeof AuthenticatedMyBookingsRoute
   '/book-room/$roomId': typeof AuthenticatedBookRoomRoomIdRoute
   '/book-venue/$venueId': typeof AuthenticatedBookVenueVenueIdRoute
+  '/documents/$bookingId': typeof AuthenticatedDocumentsBookingIdRoute
   '/floor-plan/$bookingId': typeof AuthenticatedFloorPlanBookingIdRoute
 }
 export interface FileRoutesById {
@@ -142,6 +151,7 @@ export interface FileRoutesById {
   '/_authenticated/my-bookings': typeof AuthenticatedMyBookingsRoute
   '/_authenticated/book-room/$roomId': typeof AuthenticatedBookRoomRoomIdRoute
   '/_authenticated/book-venue/$venueId': typeof AuthenticatedBookVenueVenueIdRoute
+  '/_authenticated/documents/$bookingId': typeof AuthenticatedDocumentsBookingIdRoute
   '/_authenticated/floor-plan/$bookingId': typeof AuthenticatedFloorPlanBookingIdRoute
 }
 export interface FileRouteTypes {
@@ -159,6 +169,7 @@ export interface FileRouteTypes {
     | '/my-bookings'
     | '/book-room/$roomId'
     | '/book-venue/$venueId'
+    | '/documents/$bookingId'
     | '/floor-plan/$bookingId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -174,6 +185,7 @@ export interface FileRouteTypes {
     | '/my-bookings'
     | '/book-room/$roomId'
     | '/book-venue/$venueId'
+    | '/documents/$bookingId'
     | '/floor-plan/$bookingId'
   id:
     | '__root__'
@@ -190,6 +202,7 @@ export interface FileRouteTypes {
     | '/_authenticated/my-bookings'
     | '/_authenticated/book-room/$roomId'
     | '/_authenticated/book-venue/$venueId'
+    | '/_authenticated/documents/$bookingId'
     | '/_authenticated/floor-plan/$bookingId'
   fileRoutesById: FileRoutesById
 }
@@ -297,6 +310,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBookVenueVenueIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/documents/$bookingId': {
+      id: '/_authenticated/documents/$bookingId'
+      path: '/documents/$bookingId'
+      fullPath: '/documents/$bookingId'
+      preLoaderRoute: typeof AuthenticatedDocumentsBookingIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/floor-plan/$bookingId': {
       id: '/_authenticated/floor-plan/$bookingId'
       path: '/floor-plan/$bookingId'
@@ -313,6 +333,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMyBookingsRoute: typeof AuthenticatedMyBookingsRoute
   AuthenticatedBookRoomRoomIdRoute: typeof AuthenticatedBookRoomRoomIdRoute
   AuthenticatedBookVenueVenueIdRoute: typeof AuthenticatedBookVenueVenueIdRoute
+  AuthenticatedDocumentsBookingIdRoute: typeof AuthenticatedDocumentsBookingIdRoute
   AuthenticatedFloorPlanBookingIdRoute: typeof AuthenticatedFloorPlanBookingIdRoute
 }
 
@@ -322,6 +343,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMyBookingsRoute: AuthenticatedMyBookingsRoute,
   AuthenticatedBookRoomRoomIdRoute: AuthenticatedBookRoomRoomIdRoute,
   AuthenticatedBookVenueVenueIdRoute: AuthenticatedBookVenueVenueIdRoute,
+  AuthenticatedDocumentsBookingIdRoute: AuthenticatedDocumentsBookingIdRoute,
   AuthenticatedFloorPlanBookingIdRoute: AuthenticatedFloorPlanBookingIdRoute,
 }
 

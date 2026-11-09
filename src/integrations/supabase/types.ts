@@ -147,36 +147,51 @@ export type Database = {
       }
       room_bookings: {
         Row: {
+          amount_due: number
           check_in: string
           check_out: string
           created_at: string
           guests: number
           id: number
           legacy_user_id: number | null
+          paid_at: string | null
+          payment_method: string
+          payment_reference: string | null
+          payment_status: string
           room_id: number
           special_orders: string
           status: string
           user_id: string | null
         }
         Insert: {
+          amount_due?: number
           check_in: string
           check_out: string
           created_at?: string
           guests: number
           id?: number
           legacy_user_id?: number | null
+          paid_at?: string | null
+          payment_method?: string
+          payment_reference?: string | null
+          payment_status?: string
           room_id: number
           special_orders?: string
           status?: string
           user_id?: string | null
         }
         Update: {
+          amount_due?: number
           check_in?: string
           check_out?: string
           created_at?: string
           guests?: number
           id?: number
           legacy_user_id?: number | null
+          paid_at?: string | null
+          payment_method?: string
+          payment_reference?: string | null
+          payment_status?: string
           room_id?: number
           special_orders?: string
           status?: string
@@ -362,6 +377,107 @@ export type Database = {
             columns: ["venue_id"]
             isOneToOne: false
             referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venue_document_requirements: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string
+          id: number
+          sort_order: number
+          template_name: string | null
+          template_path: string | null
+          title: string
+          updated_at: string
+          venue_id: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string
+          id?: number
+          sort_order?: number
+          template_name?: string | null
+          template_path?: string | null
+          title: string
+          updated_at?: string
+          venue_id: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string
+          id?: number
+          sort_order?: number
+          template_name?: string | null
+          template_path?: string | null
+          title?: string
+          updated_at?: string
+          venue_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_document_requirements_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venue_document_submissions: {
+        Row: {
+          admin_note: string
+          booking_id: number
+          file_paths: string[]
+          id: number
+          requirement_id: number
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string
+          submitted_by: string | null
+        }
+        Insert: {
+          admin_note?: string
+          booking_id: number
+          file_paths?: string[]
+          id?: number
+          requirement_id: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          submitted_by?: string | null
+        }
+        Update: {
+          admin_note?: string
+          booking_id?: number
+          file_paths?: string[]
+          id?: number
+          requirement_id?: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          submitted_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_document_submissions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "venue_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venue_document_submissions_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "venue_document_requirements"
             referencedColumns: ["id"]
           },
         ]
