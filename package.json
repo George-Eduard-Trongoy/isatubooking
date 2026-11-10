@@ -81,7 +81,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.2.0",
-    "drizzle-kit": "0.x",
+    "drizzle-kit": "^0.31.11",
     "drizzle-orm": "0.x",
     "eslint": "^9.32.0",
     "eslint-config-prettier": "^10.1.1",
@@ -97,5 +97,10 @@
     "typescript-eslint": "^8.56.1",
     "vite": "8.1.5",
     "vitest": "^4.1.10"
+  },
+  "allowScripts": {
+    "esbuild@0.18.20": true,
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.2": true
   }
 }
