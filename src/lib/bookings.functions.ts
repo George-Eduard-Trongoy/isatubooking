@@ -2,11 +2,15 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
+  amountForOption,
+  balanceDue,
   canPayOnline,
   paymentStatusAfterClosing,
+  paymentStatusFor,
   roomTotal,
   summarizeDocuments,
   validateRoomRequest,
+  validateReservationPayment,
   validateSandboxAccount,
   validateVenueRequest,
   type DocumentSummary,
@@ -78,13 +82,14 @@ const roomInput = z.object({
   check_out: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   guests: z.number().int(),
   special_orders: z.string().max(1000).default(""),
-  payment_method: z.enum(["pay_at_desk", "sandbox"]).default("pay_at_desk"),
+  payment_option: z.enum(["downpayment", "full"]),
+  sandbox_mobile: z.string().max(20),
 });
 
 export const createRoomBooking = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: z.input<typeof roomInput>) => roomInput.parse(d))
-  .handler(async ({ data, context }): Promise<Result<{ bookingId: number }>> => {
+  .handler(async ({ data, context }): Promise<Result<{ bookingId: number; reference: string; amountPaid: number; balance: number }>> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: room } = await supabaseAdmin
       .from("rooms")
@@ -96,6 +101,15 @@ export const createRoomBooking = createServerFn({ method: "POST" })
     const err = validateRoomRequest(data, room, busy ?? []);
     if (err) return { ok: false, message: err };
 
+    // A reservation is placed only together with a Sandbox payment of at least 50% of the bill.
+    const accountError = validateSandboxAccount(data.sandbox_mobile);
+    if (accountError) return { ok: false, message: accountError };
+    const total = roomTotal(Number(room.price_per_night), data.check_in, data.check_out);
+    const amount = amountForOption(total, data.payment_option);
+    const paymentError = validateReservationPayment(total, amount);
+    if (paymentError) return { ok: false, message: paymentError };
+
+    const reference = sandboxReference();
     const { data: row, error } = await supabaseAdmin
       .from("room_bookings")
       .insert({
@@ -106,14 +120,17 @@ export const createRoomBooking = createServerFn({ method: "POST" })
         guests: data.guests,
         special_orders: data.special_orders.trim(),
         status: "pending",
-        payment_method: data.payment_method,
-        payment_status: "unpaid",
-        amount_due: roomTotal(Number(room.price_per_night), data.check_in, data.check_out),
+        payment_method: "sandbox",
+        payment_status: paymentStatusFor(total, amount),
+        amount_due: total,
+        amount_paid: amount,
+        payment_reference: reference,
+        paid_at: new Date().toISOString(),
       })
       .select("id")
       .single();
-    if (error || !row) return { ok: false, message: "Could not save the reservation. Please try again." };
-    return { ok: true, bookingId: row.id };
+    if (error || !row) return { ok: false, message: "Could not save the reservation. You were not charged." };
+    return { ok: true, bookingId: row.id, reference, amountPaid: amount, balance: balanceDue(total, amount) };
   });
 
 export type MyVenueBooking = {
@@ -146,6 +163,7 @@ export type MyRoomBooking = {
   payment_method: string;
   payment_status: string;
   amount_due: number;
+  amount_paid: number;
   payment_reference: string | null;
 };
 
@@ -161,7 +179,7 @@ export const getMyBookings = createServerFn({ method: "POST" })
         .order("id", { ascending: false }),
       supabase
         .from("room_bookings")
-        .select("id, check_in, check_out, guests, special_orders, status, created_at, payment_method, payment_status, amount_due, payment_reference, rooms(room_number, price_per_night, facilities(name), room_types(name))")
+        .select("id, check_in, check_out, guests, special_orders, status, created_at, payment_method, payment_status, amount_due, amount_paid, payment_reference, rooms(room_number, price_per_night, facilities(name), room_types(name))")
         .eq("user_id", userId)
         .order("id", { ascending: false }),
       supabase.from("venue_document_requirements").select("id, venue_id").eq("active", true),
@@ -196,7 +214,8 @@ export const getMyBookings = createServerFn({ method: "POST" })
       created_at: b.created_at,
       payment_method: b.payment_method,
       payment_status: b.payment_status,
-      amount_due: Number(b.amount_due ?? 0),
+      amount_due: Number(b.amount_due) > 0 ? Number(b.amount_due) : roomTotal(Number(b.rooms?.price_per_night ?? 0), b.check_in, b.check_out),
+      amount_paid: Number(b.amount_paid ?? 0),
       payment_reference: b.payment_reference ?? null,
     }));
     return { venue, room };
@@ -322,75 +341,34 @@ export const saveFloorPlan = createServerFn({ method: "POST" })
 
 // ---------- Room payments (mock "Sandbox" online wallet) ----------
 
-export type RoomCheckout = {
-  id: number;
-  room_number: string;
-  room_type: string;
-  facility_name: string;
-  check_in: string;
-  check_out: string;
-  guests: number;
-  status: string;
-  payment_method: string;
-  payment_status: string;
-  amount_due: number;
-  payment_reference: string | null;
-  paid_at: string | null;
-};
-
-export const getRoomCheckout = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: number }) => z.object({ id: z.number().int().positive() }).parse(d))
-  .handler(async ({ data, context }): Promise<RoomCheckout | null> => {
-    const { data: b } = await context.supabase
-      .from("room_bookings")
-      .select("id, user_id, check_in, check_out, guests, status, payment_method, payment_status, amount_due, payment_reference, paid_at, rooms(room_number, price_per_night, facilities(name), room_types(name))")
-      .eq("id", data.id)
-      .maybeSingle();
-    if (!b || b.user_id !== context.userId) return null;
-    const room = (b as any).rooms;
-    const amount = Number(b.amount_due) > 0 ? Number(b.amount_due) : roomTotal(Number(room?.price_per_night ?? 0), b.check_in, b.check_out);
-    return {
-      id: b.id,
-      room_number: room?.room_number ?? "",
-      room_type: room?.room_types?.name ?? "Standard Room",
-      facility_name: room?.facilities?.name ?? "",
-      check_in: b.check_in,
-      check_out: b.check_out,
-      guests: b.guests,
-      status: b.status,
-      payment_method: b.payment_method,
-      payment_status: b.payment_status,
-      amount_due: amount,
-      payment_reference: b.payment_reference,
-      paid_at: b.paid_at,
-    };
-  });
-
 function sandboxReference(): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const bytes = crypto.getRandomValues(new Uint8Array(10));
   return `SBX-${Array.from(bytes, (x) => alphabet[x % alphabet.length]).join("")}`;
 }
 
-export const paySandbox = createServerFn({ method: "POST" })
+/** Pays the remaining balance of an existing reservation through the Sandbox wallet. */
+export const paySandboxBalance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: number; mobile: string }) =>
     z.object({ id: z.number().int().positive(), mobile: z.string().max(20) }).parse(d),
   )
-  .handler(async ({ data, context }): Promise<Result<{ reference: string }>> => {
+  .handler(async ({ data, context }): Promise<Result<{ reference: string; amount: number }>> => {
     const accountError = validateSandboxAccount(data.mobile);
     if (accountError) return { ok: false, message: accountError };
     const { data: b } = await context.supabase
       .from("room_bookings")
-      .select("id, user_id, check_in, check_out, status, payment_status, amount_due, rooms(price_per_night)")
+      .select("id, user_id, check_in, check_out, status, payment_status, amount_due, amount_paid, rooms(price_per_night)")
       .eq("id", data.id)
       .maybeSingle();
     if (!b || b.user_id !== context.userId) return { ok: false, message: "Reservation not found." };
     if (!canPayOnline(b)) {
-      return { ok: false, message: b.payment_status === "paid" ? "This reservation is already paid." : "This reservation can no longer be paid." };
+      return { ok: false, message: b.payment_status === "paid" ? "This reservation is already paid in full." : "This reservation can no longer be paid." };
     }
-    const amount = roomTotal(Number((b as any).rooms?.price_per_night ?? 0), b.check_in, b.check_out);
+    const total = Number(b.amount_due) > 0 ? Number(b.amount_due) : roomTotal(Number((b as any).rooms?.price_per_night ?? 0), b.check_in, b.check_out);
+    const paidBefore = Number(b.amount_paid ?? 0);
+    const amount = balanceDue(total, paidBefore);
+    if (amount <= 0) return { ok: false, message: "This reservation is already paid in full." };
     const reference = sandboxReference();
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows, error } = await supabaseAdmin
@@ -398,13 +376,14 @@ export const paySandbox = createServerFn({ method: "POST" })
       .update({
         payment_method: "sandbox",
         payment_status: "paid",
-        amount_due: amount,
+        amount_due: total,
+        amount_paid: total,
         payment_reference: reference,
         paid_at: new Date().toISOString(),
       })
       .eq("id", b.id)
-      .eq("payment_status", "unpaid")
+      .eq("amount_paid", paidBefore)
       .select("id");
     if (error || !rows?.length) return { ok: false, message: "The payment could not be completed. You were not charged." };
-    return { ok: true, reference };
+    return { ok: true, reference, amount };
   });

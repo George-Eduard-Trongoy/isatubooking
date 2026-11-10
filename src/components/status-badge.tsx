@@ -22,6 +22,23 @@ export function StatusBadge({ status, className }: { status: string; className?:
   );
 }
 
+const paymentStyles: Record<string, { label: string; cls: string }> = {
+  unpaid: { label: "Unpaid", cls: "bg-warning-soft text-warning ring-warning/25" },
+  partial: { label: "Downpayment paid", cls: "bg-gold-soft text-accent-foreground ring-gold/30" },
+  paid: { label: "Paid in full", cls: "bg-success-soft text-success ring-success/25" },
+  refunded: { label: "Refunded", cls: "bg-muted text-muted-foreground ring-border" },
+};
+
+export function PaymentBadge({ status, className }: { status: string; className?: string }) {
+  const s = paymentStyles[status] ?? paymentStyles["unpaid"]!;
+  return (
+    <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset", s.cls, className)}>
+      <span className="size-1.5 rounded-full bg-current" />
+      {s.label}
+    </span>
+  );
+}
+
 export function PageIntro({
   eyebrow,
   title,

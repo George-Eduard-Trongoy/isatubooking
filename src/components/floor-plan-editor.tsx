@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Circle, Group, Layer, Rect, Stage, Text, Transformer } from "react-konva";
 import type Konva from "konva";
 import {
+  ArrowRight,
   Copy,
   Download,
   Eraser,
@@ -35,13 +36,16 @@ type Props = {
   attendees: number;
   canEdit: boolean;
   onSave: (plan: { style: string; items: PlanItem[] }) => Promise<boolean>;
+  /** Next step after the floor plan (saves pending changes first). */
+  onContinue?: () => void;
+  continueLabel?: string;
   fileName: string;
 };
 
 let uid = 0;
 const newId = () => `item_${Date.now().toString(36)}_${(uid++).toString(36)}`;
 
-export default function FloorPlanEditor({ initial, venue, attendees, canEdit, onSave, fileName }: Props) {
+export default function FloorPlanEditor({ initial, venue, attendees, canEdit, onSave, onContinue, continueLabel = "Continue", fileName }: Props) {
   const [items, setItems] = useState<PlanItem[]>(initial.items);
   const [style, setStyle] = useState<string>(LAYOUT_STYLES.some((s) => s.value === initial.style) ? initial.style : "banquet");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -142,6 +146,12 @@ export default function FloorPlanEditor({ initial, venue, attendees, canEdit, on
     const ok = await onSave({ style, items });
     setSaving(false);
     if (ok) setDirty(false);
+    return ok;
+  };
+
+  const saveAndContinue = async () => {
+    if (canEdit && dirty && !(await save())) return;
+    onContinue?.();
   };
 
   useEffect(() => {
@@ -278,8 +288,13 @@ export default function FloorPlanEditor({ initial, venue, attendees, canEdit, on
           <div className="flex gap-2">
             <Button variant="outline" onClick={exportPng}><Download /> Export PNG</Button>
             {canEdit && (
-              <Button variant="gold" onClick={save} disabled={saving}>
+              <Button variant={onContinue ? "outline" : "gold"} onClick={save} disabled={saving || !dirty}>
                 {saving ? <Loader2 className="animate-spin" /> : <Save />} Save floor plan
+              </Button>
+            )}
+            {onContinue && (
+              <Button variant={canEdit ? "default" : "gold"} onClick={saveAndContinue} disabled={saving}>
+                {canEdit && dirty ? "Save and continue" : continueLabel} <ArrowRight />
               </Button>
             )}
           </div>

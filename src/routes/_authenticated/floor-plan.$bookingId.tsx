@@ -1,4 +1,4 @@
-import { ClientOnly, createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { ClientOnly, createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { queryOptions, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { lazy, Suspense } from "react";
@@ -41,6 +41,7 @@ function FloorPlanPage() {
   const save = useServerFn(saveFloorPlan);
   const qc = useQueryClient();
   const { isStaff } = useAuth();
+  const navigate = useNavigate();
 
   const onSave = async (plan: { style: string; items: unknown[] }) => {
     const res = await save({ data: { id, style: plan.style, items: plan.items } });
@@ -78,7 +79,7 @@ function FloorPlanPage() {
       </header>
 
       <p className="mt-5 text-sm text-muted-foreground">
-        This layout was generated from your booking details. Move, rotate, add or remove items, then save to share it with the venue team.
+        This layout was generated from your booking details. Move, rotate, add or remove items, then continue to the required documents. Your changes are saved when you continue.
       </p>
 
       <div className="mt-6">
@@ -90,6 +91,8 @@ function FloorPlanPage() {
               attendees={b.attendees}
               canEdit={b.canEdit}
               onSave={onSave}
+              onContinue={() => navigate({ to: "/documents/$bookingId", params: { bookingId: String(id) } })}
+              continueLabel={isStaff ? "View documents" : "Continue to documents"}
               fileName={`floor-plan-booking-${b.id}`}
             />
           </Suspense>

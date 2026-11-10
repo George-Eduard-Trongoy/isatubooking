@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { BOOKING_STATUSES, summarizeDocuments } from "./booking-rules";
+import { BOOKING_STATUSES, roomTotal, summarizeDocuments } from "./booking-rules";
 import { isStaffEmail, normalizeUsername, resolveNewAccountRole, staffEmailFor, type AppRole } from "./identity";
 import { requireStaff, staffScope, type Ctx } from "./staff-scope";
 
@@ -27,7 +27,7 @@ export const getAdminDashboard = createServerFn({ method: "POST" })
         .order("id", { ascending: false }),
       sb
         .from("room_bookings")
-        .select("id, user_id, legacy_user_id, check_in, check_out, guests, special_orders, status, created_at, room_id, payment_method, payment_status, amount_due, payment_reference, rooms(room_number, facility_id, room_types(name))")
+        .select("id, user_id, legacy_user_id, check_in, check_out, guests, special_orders, status, created_at, room_id, payment_method, payment_status, amount_due, amount_paid, payment_reference, rooms(room_number, facility_id, price_per_night, room_types(name))")
         .order("id", { ascending: false }),
       sb.from("venues").select("*").order("id"),
       sb.from("rooms").select("*, room_types(name)").order("facility_id").order("room_number"),
@@ -96,7 +96,8 @@ export const getAdminDashboard = createServerFn({ method: "POST" })
         room_type: (b.rooms?.room_types?.name ?? "Standard") as string,
         payment_method: b.payment_method as string,
         payment_status: b.payment_status as string,
-        amount_due: Number(b.amount_due ?? 0),
+        amount_due: Number(b.amount_due) > 0 ? Number(b.amount_due) : roomTotal(Number(b.rooms?.price_per_night ?? 0), b.check_in, b.check_out),
+        amount_paid: Number(b.amount_paid ?? 0),
         payment_reference: (b.payment_reference ?? null) as string | null,
       })),
       venues: (venues.data ?? [])
@@ -128,7 +129,7 @@ export const updateBookingStatus = createServerFn({ method: "POST" })
     if (error || !rows?.length) return { ok: false, message: "This booking is managed by another administrator." };
     // Sandbox payments are refunded when a room booking is closed.
     if (data.type === "room" && (data.status === "rejected" || data.status === "cancelled")) {
-      await context.supabase.from("room_bookings").update({ payment_status: "refunded" }).eq("id", data.id).eq("payment_status", "paid");
+      await context.supabase.from("room_bookings").update({ payment_status: "refunded" }).eq("id", data.id).in("payment_status", ["paid", "partial"]);
     }
     return { ok: true };
   });

@@ -184,27 +184,60 @@ export function venueBlockedDates(
 
 // ---------- Room payments ----------
 
-export const PAYMENT_METHODS = [
-  { value: "pay_at_desk", label: "Pay at the front desk", detail: "Settle the bill in cash or card when you check in." },
-  { value: "sandbox", label: "Sandbox online wallet", detail: "Pay now with the Sandbox e-wallet. This is a test wallet and no real money moves." },
-] as const;
-export type PaymentMethod = (typeof PAYMENT_METHODS)[number]["value"];
-export const PAYMENT_STATUSES = ["unpaid", "paid", "refunded"] as const;
+export const PAYMENT_STATUSES = ["unpaid", "partial", "paid", "refunded"] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
-export function isPaymentMethod(v: string): v is PaymentMethod {
-  return PAYMENT_METHODS.some((m) => m.value === v);
-}
+/** Share of the room bill that must be paid online (Sandbox) to place a reservation. */
+export const DOWNPAYMENT_RATE = 0.5;
+
+export const PAYMENT_OPTIONS = [
+  { value: "downpayment", label: "50% downpayment", detail: "Pay half now. Settle the balance online or at the front desk before check-out." },
+  { value: "full", label: "Pay in full", detail: "Pay the whole bill now." },
+] as const;
+export type PaymentOption = (typeof PAYMENT_OPTIONS)[number]["value"];
+
+const toCents = (v: number) => Math.round(Number(v) * 100);
+const fromCents = (c: number) => c / 100;
 
 /** Room bill: nightly rate times nights, with a one-night minimum. */
 export function roomTotal(pricePerNight: number, checkIn: string, checkOut: string): number {
   const nights = Math.max(1, daysBetween(checkIn, checkOut));
-  return Math.round(Number(pricePerNight) * nights * 100) / 100;
+  return fromCents(toCents(Number(pricePerNight) * nights));
 }
 
-/** Only open, unpaid reservations can be paid online. */
+/** Minimum amount to reserve a room: 50% of the bill, rounded up to the centavo. */
+export function minimumDownpayment(total: number): number {
+  return fromCents(Math.ceil(toCents(total) * DOWNPAYMENT_RATE));
+}
+
+/** Amount charged now for the chosen payment option. */
+export function amountForOption(total: number, option: PaymentOption): number {
+  return option === "full" ? fromCents(toCents(total)) : minimumDownpayment(total);
+}
+
+export function balanceDue(total: number, paid: number): number {
+  return fromCents(Math.max(0, toCents(total) - toCents(paid)));
+}
+
+/** Payment status from what has been paid so far. */
+export function paymentStatusFor(total: number, paid: number): PaymentStatus {
+  if (toCents(paid) <= 0) return "unpaid";
+  return toCents(paid) >= toCents(total) ? "paid" : "partial";
+}
+
+/** Returns an error message, or null when a reservation payment of `amount` is acceptable. */
+export function validateReservationPayment(total: number, amount: number): string | null {
+  if (!(total > 0)) return "This room does not have a price yet. Please contact the front desk.";
+  if (toCents(amount) < toCents(minimumDownpayment(total))) {
+    return `A downpayment of at least 50% (${formatPeso(minimumDownpayment(total))}) is required to reserve this room.`;
+  }
+  if (toCents(amount) > toCents(total)) return "The payment cannot be more than the total bill.";
+  return null;
+}
+
+/** Open reservations with a remaining balance can be paid online. */
 export function canPayOnline(b: { status: string; payment_status: string }): boolean {
-  return (b.status === "pending" || b.status === "approved") && b.payment_status === "unpaid";
+  return (b.status === "pending" || b.status === "approved") && (b.payment_status === "unpaid" || b.payment_status === "partial");
 }
 
 /** Sandbox wallet accounts use a Philippine mobile number: 11 digits starting with 09. */
@@ -213,9 +246,9 @@ export function validateSandboxAccount(mobile: string): string | null {
   return /^09\d{9}$/.test(digits) ? null : "Enter the 11-digit mobile number of your Sandbox wallet, starting with 09.";
 }
 
-/** Payment status after a booking is cancelled or rejected: paid bills are refunded. */
+/** Payment status after a booking is cancelled or rejected: any amount paid is refunded. */
 export function paymentStatusAfterClosing(paymentStatus: string): string {
-  return paymentStatus === "paid" ? "refunded" : paymentStatus;
+  return paymentStatus === "paid" || paymentStatus === "partial" ? "refunded" : paymentStatus;
 }
 
 // ---------- Venue documents ----------

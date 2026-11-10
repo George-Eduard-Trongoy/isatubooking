@@ -148,6 +148,7 @@ export type Database = {
       room_bookings: {
         Row: {
           amount_due: number
+          amount_paid: number
           check_in: string
           check_out: string
           created_at: string
@@ -165,6 +166,7 @@ export type Database = {
         }
         Insert: {
           amount_due?: number
+          amount_paid?: number
           check_in: string
           check_out: string
           created_at?: string
@@ -182,6 +184,7 @@ export type Database = {
         }
         Update: {
           amount_due?: number
+          amount_paid?: number
           check_in?: string
           check_out?: string
           created_at?: string

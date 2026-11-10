@@ -3,7 +3,7 @@ import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import type { DateRange } from "react-day-picker";
-import { CalendarDays, Info, Loader2, Plus, Users } from "lucide-react";
+import { CalendarDays, Info, Loader2, Plus, ShieldCheck, Users, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -14,7 +14,21 @@ import { BookingHero } from "@/components/booking-hero";
 import { FormMessage } from "@/components/status-badge";
 import { getRoom, getRoomAvailability } from "@/lib/catalog.functions";
 import { createRoomBooking } from "@/lib/bookings.functions";
-import { addDays, daysBetween, formatDate, formatPeso, roomBlockedDates, todayYMD, validateRoomRequest } from "@/lib/booking-rules";
+import {
+  PAYMENT_OPTIONS,
+  addDays,
+  amountForOption,
+  balanceDue,
+  daysBetween,
+  formatDate,
+  formatPeso,
+  roomBlockedDates,
+  roomTotal,
+  todayYMD,
+  validateRoomRequest,
+  validateSandboxAccount,
+  type PaymentOption,
+} from "@/lib/booking-rules";
 import { dateToYmd, ymdToDate } from "@/lib/date-utils";
 import { cn } from "@/lib/utils";
 
@@ -67,6 +81,8 @@ function BookRoomPage() {
   const [range, setRange] = useState<DateRange | undefined>();
   const [guests, setGuests] = useState(1);
   const [notes, setNotes] = useState("");
+  const [option, setOption] = useState<PaymentOption>("downpayment");
+  const [mobile, setMobile] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -76,6 +92,9 @@ function BookRoomPage() {
   const nights = checkIn && checkOut ? daysBetween(checkIn, checkOut) : 0;
   const req = { check_in: checkIn, check_out: checkOut, guests };
   const liveCheck = checkIn && checkOut ? validateRoomRequest(req, room, busy) : "Select check-in and check-out dates.";
+  const total = checkIn && checkOut ? roomTotal(room.price_per_night, checkIn, checkOut) : room.price_per_night;
+  const dueNow = amountForOption(total, option);
+  const balance = balanceDue(total, dueNow);
 
   const applyPreset = (n: number) => {
     const start = checkIn || today;
@@ -84,14 +103,14 @@ function BookRoomPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const err = validateRoomRequest(req, room, busy);
+    const err = validateRoomRequest(req, room, busy) ?? validateSandboxAccount(mobile);
     if (err) return setError(err);
     setError(null);
     setSubmitting(true);
     try {
-      const res = await create({ data: { room_id: room.id, ...req, special_orders: notes } });
+      const res = await create({ data: { room_id: room.id, ...req, special_orders: notes, payment_option: option, sandbox_mobile: mobile } });
       if (!res.ok) return setError(res.message);
-      toast.success(`Reservation for Room ${room.room_number} submitted.`);
+      toast.success(`Paid ${formatPeso(res.amountPaid)} through Sandbox (ref ${res.reference}). Reservation for Room ${room.room_number} submitted.`);
       navigate({ to: "/my-bookings" });
     } catch {
       setError("Something went wrong. Please try again.");
@@ -172,6 +191,48 @@ function BookRoomPage() {
               <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} maxLength={1000} placeholder="Bedding preference, arrival time, accessibility needs..." className="mt-2" />
             </div>
           </section>
+
+          <section className="rounded-2xl border border-border bg-card p-6 shadow-soft">
+            <div className="flex items-center gap-2">
+              <Wallet className="size-5 text-gold" />
+              <h2 className="text-lg font-semibold">Payment</h2>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              A downpayment of at least 50% of the total bill, paid online through the Sandbox wallet, is required to reserve a room.
+            </p>
+            <div role="radiogroup" aria-label="Payment amount" className="mt-4 grid gap-3 sm:grid-cols-2">
+              {PAYMENT_OPTIONS.map((o) => {
+                const active = option === o.value;
+                return (
+                  <button
+                    key={o.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => setOption(o.value)}
+                    className={cn(
+                      "rounded-xl border p-4 text-left transition-colors",
+                      active ? "border-primary bg-secondary ring-1 ring-primary" : "border-border hover:bg-muted",
+                    )}
+                  >
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="font-semibold">{o.label}</span>
+                      <span className="font-display font-semibold">{formatPeso(amountForOption(total, o.value))}</span>
+                    </span>
+                    <span className="mt-1 block text-xs text-muted-foreground">{o.detail}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-5 rounded-xl border border-border bg-surface p-4">
+              <p className="text-sm font-semibold">Sandbox wallet</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Test wallet for demonstration. No real money is charged.</p>
+              <div className="mt-3 max-w-xs space-y-2">
+                <Label htmlFor="sandbox-mobile">Wallet mobile number</Label>
+                <Input id="sandbox-mobile" inputMode="numeric" autoComplete="tel" placeholder="09XX XXX XXXX" value={mobile} onChange={(e) => setMobile(e.target.value)} maxLength={13} className="h-11" />
+              </div>
+            </div>
+          </section>
         </div>
 
         <aside className="lg:sticky lg:top-24 lg:self-start">
@@ -183,9 +244,13 @@ function BookRoomPage() {
               <div className="flex justify-between"><dt className="text-muted-foreground">Nights</dt><dd className="font-medium">{nights || "-"}</dd></div>
               <div className="flex justify-between"><dt className="text-muted-foreground">Guests</dt><dd className="font-medium">{guests}</dd></div>
             </dl>
-            <div className="mt-5 flex items-end justify-between border-t border-border pt-5">
-              <span className="text-sm text-muted-foreground">Total</span>
-              <span className="font-display text-2xl font-semibold">{formatPeso(room.price_per_night * Math.max(nights, 1))}</span>
+            <dl className="mt-5 space-y-3 border-t border-border pt-5 text-sm">
+              <div className="flex justify-between"><dt className="text-muted-foreground">Total bill</dt><dd className="font-medium">{formatPeso(total)}</dd></div>
+              <div className="flex justify-between"><dt className="text-muted-foreground">Balance after payment</dt><dd className="font-medium">{formatPeso(balance)}</dd></div>
+            </dl>
+            <div className="mt-4 flex items-end justify-between border-t border-border pt-4">
+              <span className="text-sm text-muted-foreground">Due now</span>
+              <span className="font-display text-2xl font-semibold">{formatPeso(dueNow)}</span>
             </div>
             <p className={cn("mt-4 flex items-start gap-2 text-xs", liveCheck ? "text-warning" : "text-success")}>
               <Info className="mt-0.5 size-3.5 shrink-0" />
@@ -193,8 +258,9 @@ function BookRoomPage() {
             </p>
             {error && <div className="mt-4"><FormMessage tone="error">{error}</FormMessage></div>}
             <Button type="submit" variant="gold" size="lg" className="mt-6 w-full" disabled={submitting}>
-              {submitting && <Loader2 className="animate-spin" />} Request reservation
+              {submitting ? <Loader2 className="animate-spin" /> : <ShieldCheck />} Pay {formatPeso(dueNow)} and reserve
             </Button>
+            <p className="mt-3 text-center text-xs text-muted-foreground">Cancelled or rejected reservations are refunded to your Sandbox wallet.</p>
           </div>
         </aside>
       </form>

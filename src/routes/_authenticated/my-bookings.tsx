@@ -1,9 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { BedDouble, CalendarDays, Clock, LayoutGrid, Plus, Users } from "lucide-react";
+import { useState } from "react";
+import { BedDouble, CalendarDays, Clock, FileText, LayoutGrid, Loader2, Plus, Users, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,9 +19,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { PageIntro, StatusBadge } from "@/components/status-badge";
-import { cancelBooking, getMyBookings } from "@/lib/bookings.functions";
-import { daysBetween, formatDate, formatPeso } from "@/lib/booking-rules";
+import { FormMessage, PageIntro, PaymentBadge, StatusBadge } from "@/components/status-badge";
+import { cancelBooking, getMyBookings, paySandboxBalance } from "@/lib/bookings.functions";
+import { balanceDue, canPayOnline, daysBetween, formatDate, formatPeso, validateSandboxAccount } from "@/lib/booking-rules";
 
 const myBookingsQuery = (fn: () => ReturnType<typeof getMyBookings>) =>
   queryOptions({ queryKey: ["my-bookings"], queryFn: fn });
@@ -87,9 +91,15 @@ function MyBookingsPage() {
                       <span className="inline-flex items-center gap-1.5"><Users className="size-4" />{b.attendees} guests</span>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button asChild variant="outline">
                       <Link to="/floor-plan/$bookingId" params={{ bookingId: String(b.id) }}><LayoutGrid /> Floor plan</Link>
+                    </Button>
+                    <Button asChild variant={b.documents.total > 0 && !b.documents.complete && active ? "gold" : "outline"}>
+                      <Link to="/documents/$bookingId" params={{ bookingId: String(b.id) }}>
+                        <FileText /> Documents
+                        {b.documents.total > 0 && <span className="text-xs opacity-80">{b.documents.approved}/{b.documents.total}</span>}
+                      </Link>
                     </Button>
                     {active && <CancelButton onConfirm={() => doCancel("venue", b.id)} />}
                   </div>
@@ -109,6 +119,7 @@ function MyBookingsPage() {
             {data.room.map((b) => {
               const nights = Math.max(1, daysBetween(b.check_in, b.check_out));
               const active = b.status === "pending" || b.status === "approved";
+              const balance = balanceDue(b.amount_due, b.amount_paid);
               return (
                 <article key={b.id} className="flex flex-col gap-5 rounded-2xl border border-border bg-card p-5 shadow-soft md:flex-row md:items-center">
                   <span className="hidden size-12 shrink-0 place-items-center rounded-xl bg-secondary md:grid"><BedDouble className="size-5" /></span>
@@ -121,11 +132,19 @@ function MyBookingsPage() {
                     <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted-foreground">
                       <span>{formatDate(b.check_in)} to {formatDate(b.check_out)} ({nights} night{nights > 1 ? "s" : ""})</span>
                       <span>{b.guests} guest{b.guests > 1 ? "s" : ""}</span>
-                      <span>{formatPeso(b.price_per_night * nights)}</span>
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                      <PaymentBadge status={b.payment_status} />
+                      <span>Paid <b>{formatPeso(b.amount_paid)}</b> of {formatPeso(b.amount_due)}</span>
+                      {b.payment_status !== "refunded" && balance > 0 && <span className="text-muted-foreground">Balance {formatPeso(balance)}</span>}
+                      {b.payment_reference && <span className="text-xs text-muted-foreground">Ref {b.payment_reference}</span>}
                     </div>
                     {b.special_orders && <p className="mt-2 rounded-lg bg-muted px-3 py-2 text-sm">{b.special_orders}</p>}
                   </div>
-                  {active && <CancelButton onConfirm={() => doCancel("room", b.id)} />}
+                  <div className="flex flex-wrap gap-2">
+                    {canPayOnline(b) && balance > 0 && <PayBalanceButton id={b.id} amount={balance} roomNumber={b.room_number} />}
+                    {active && <CancelButton onConfirm={() => doCancel("room", b.id)} />}
+                  </div>
                 </article>
               );
             })}
@@ -133,6 +152,58 @@ function MyBookingsPage() {
         )}
       </section>
     </div>
+  );
+}
+
+function PayBalanceButton({ id, amount, roomNumber }: { id: number; amount: number; roomNumber: string }) {
+  const pay = useServerFn(paySandboxBalance);
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [mobile, setMobile] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const err = validateSandboxAccount(mobile);
+    if (err) return setError(err);
+    setError(null);
+    setBusy(true);
+    try {
+      const res = await pay({ data: { id, mobile } });
+      if (!res.ok) return setError(res.message);
+      toast.success(`Paid ${formatPeso(res.amount)} through Sandbox (ref ${res.reference}).`);
+      setOpen(false);
+      qc.invalidateQueries({ queryKey: ["my-bookings"] });
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="gold"><Wallet /> Pay balance</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <form onSubmit={submit}>
+          <DialogHeader>
+            <DialogTitle>Pay the balance for Room {roomNumber}</DialogTitle>
+            <DialogDescription>Settle the remaining {formatPeso(amount)} with your Sandbox wallet. This is a test wallet and no real money is charged.</DialogDescription>
+          </DialogHeader>
+          <div className="mt-5 space-y-2">
+            <Label htmlFor={`balance-mobile-${id}`}>Wallet mobile number</Label>
+            <Input id={`balance-mobile-${id}`} inputMode="numeric" placeholder="09XX XXX XXXX" value={mobile} onChange={(e) => setMobile(e.target.value)} maxLength={13} className="h-11" />
+          </div>
+          {error && <div className="mt-4"><FormMessage tone="error">{error}</FormMessage></div>}
+          <DialogFooter className="mt-6">
+            <Button type="submit" variant="gold" disabled={busy}>{busy && <Loader2 className="animate-spin" />} Pay {formatPeso(amount)}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

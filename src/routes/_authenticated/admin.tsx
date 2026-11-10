@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { BedDouble, CalendarOff, ClipboardList, ImageIcon, LayoutGrid, Loader2, Pencil, Plus, ShieldAlert, Trash2, UserPlus, Users } from "lucide-react";
+import { BedDouble, CalendarOff, ClipboardList, FileText, ImageIcon, LayoutGrid, Loader2, Pencil, Plus, ShieldAlert, Trash2, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FormMessage, PageIntro, StatusBadge } from "@/components/status-badge";
+import { FormMessage, PageIntro, PaymentBadge, StatusBadge } from "@/components/status-badge";
 import { useAuth } from "@/hooks/use-auth";
 import {
   addBlackout,
@@ -166,7 +166,10 @@ function BookingsPanel({ d }: { d: Dashboard }) {
                     <td className={td}><p>{b.booking_date === b.end_date ? formatDate(b.booking_date) : `${formatDate(b.booking_date)} to ${formatDate(b.end_date)}`}</p><p className="text-xs text-muted-foreground">{b.start_time} to {b.end_time} · {days} day{days > 1 ? "s" : ""}</p></td>
                     <td className={td}>{b.attendees}</td>
                     <td className={td}><div className="flex flex-col gap-2"><StatusBadge status={b.status} /><StatusSelect type="venue" id={b.id} status={b.status} /></div></td>
-                    <td className={td}><Button asChild size="sm" variant="outline"><Link to="/floor-plan/$bookingId" params={{ bookingId: String(b.id) }}><LayoutGrid /> Floor plan</Link></Button></td>
+                    <td className={td}><div className="flex flex-col gap-2">
+                      <Button asChild size="sm" variant="outline"><Link to="/floor-plan/$bookingId" params={{ bookingId: String(b.id) }}><LayoutGrid /> Floor plan</Link></Button>
+                      <Button asChild size="sm" variant={b.documents.pending > 0 ? "gold" : "outline"}><Link to="/documents/$bookingId" params={{ bookingId: String(b.id) }}><FileText /> Documents {b.documents.total > 0 && `${b.documents.approved}/${b.documents.total}`}</Link></Button>
+                    </div></td>
                   </tr>
                 );
               })}
@@ -178,7 +181,7 @@ function BookingsPanel({ d }: { d: Dashboard }) {
         <h2 className="text-lg font-semibold">Room requests</h2>
         {d.roomBookings.length === 0 ? <EmptyRow text="No room requests yet." /> : (
           <div className="mt-4"><TableShell>
-            <thead className="border-b border-border bg-surface"><tr><th className={th}>Client</th><th className={th}>Room</th><th className={th}>Stay</th><th className={th}>Guests</th><th className={th}>Requests</th><th className={th}>Status</th></tr></thead>
+            <thead className="border-b border-border bg-surface"><tr><th className={th}>Client</th><th className={th}>Room</th><th className={th}>Stay</th><th className={th}>Guests</th><th className={th}>Requests</th><th className={th}>Payment</th><th className={th}>Status</th></tr></thead>
             <tbody className="divide-y divide-border">
               {d.roomBookings.map((b) => {
                 const nights = Math.max(1, daysBetween(b.check_in, b.check_out));
@@ -189,6 +192,11 @@ function BookingsPanel({ d }: { d: Dashboard }) {
                     <td className={td}><p>{formatDate(b.check_in)} to {formatDate(b.check_out)}</p><p className="text-xs text-muted-foreground">{nights} night{nights > 1 ? "s" : ""}</p></td>
                     <td className={td}>{b.guests}</td>
                     <td className={`${td} max-w-60 text-xs text-muted-foreground`}>{b.special_orders || "None"}</td>
+                    <td className={td}>
+                      <PaymentBadge status={b.payment_status} />
+                      <p className="mt-1.5 text-xs">{formatPeso(b.amount_paid)} of {formatPeso(b.amount_due)}</p>
+                      {b.payment_reference && <p className="text-xs text-muted-foreground">{b.payment_reference}</p>}
+                    </td>
                     <td className={td}><div className="flex flex-col gap-2"><StatusBadge status={b.status} /><StatusSelect type="room" id={b.id} status={b.status} /></div></td>
                   </tr>
                 );

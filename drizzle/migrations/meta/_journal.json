@@ -29,6 +29,13 @@
       "when": 1794197207099,
       "tag": "0003_venue_documents_and_room_payments",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794315403437,
+      "tag": "0004_room_downpayments",
+      "breakpoints": true
     }
   ]
 }
