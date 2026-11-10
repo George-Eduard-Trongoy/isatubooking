@@ -13,15 +13,24 @@ import { LAYOUT_STYLES, formatDate } from "@/lib/booking-rules";
 const FloorPlanEditor = lazy(() => import("@/components/floor-plan-editor"));
 
 const planQuery = (id: number) =>
-  queryOptions({ queryKey: ["floor-plan", id], queryFn: () => getFloorPlanBooking({ data: { id } }) });
+  queryOptions({
+    queryKey: ["floor-plan", id],
+    queryFn: () => getFloorPlanBooking({ data: { id } }),
+  });
 
 export const Route = createFileRoute("/_authenticated/floor-plan/$bookingId")({
   head: () => ({
     meta: [
       { title: "Floor plan designer | ISATU Booking" },
-      { name: "description", content: "Arrange tables, seating and stage equipment for your event." },
+      {
+        name: "description",
+        content: "Arrange tables, seating and stage equipment for your event.",
+      },
       { property: "og:title", content: "Floor plan designer | ISATU Booking" },
-      { property: "og:description", content: "Customize the 2D floor plan for your venue booking." },
+      {
+        property: "og:description",
+        content: "Customize the 2D floor plan for your venue booking.",
+      },
     ],
   }),
   loader: async ({ context, params }) => {
@@ -57,7 +66,10 @@ function FloorPlanPage() {
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <Link to={isStaff ? "/admin" : "/my-bookings"} className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+        <Link
+          to={isStaff ? "/admin" : "/my-bookings"}
+          className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+        >
           <ArrowLeft className="size-4" /> {isStaff ? "Back to dashboard" : "Back to my bookings"}
         </Link>
         <StepIndicator step={2} />
@@ -67,19 +79,34 @@ function FloorPlanPage() {
         <div>
           <p className="eyebrow text-gold">{b.venue.name}</p>
           <div className="mt-2 flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-semibold text-ink-foreground md:text-3xl">{b.event_name}</h1>
+            <h1 className="text-2xl font-semibold text-ink-foreground md:text-3xl">
+              {b.event_name}
+            </h1>
             <StatusBadge status={b.status} />
           </div>
         </div>
         <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-foreground/80">
-          <span className="inline-flex items-center gap-1.5"><CalendarDays className="size-4" />{b.booking_date === b.end_date ? formatDate(b.booking_date) : `${formatDate(b.booking_date)} to ${formatDate(b.end_date)}`}</span>
-          <span className="inline-flex items-center gap-1.5"><Clock className="size-4" />{b.start_time} to {b.end_time}</span>
-          <span className="inline-flex items-center gap-1.5"><Users className="size-4" />{b.attendees} guests · {LAYOUT_STYLES.find((s) => s.value === b.layout_type)?.label ?? b.layout_type}</span>
+          <span className="inline-flex items-center gap-1.5">
+            <CalendarDays className="size-4" />
+            {b.booking_date === b.end_date
+              ? formatDate(b.booking_date)
+              : `${formatDate(b.booking_date)} to ${formatDate(b.end_date)}`}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <Clock className="size-4" />
+            {b.start_time} to {b.end_time}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <Users className="size-4" />
+            {b.attendees} guests ·{" "}
+            {LAYOUT_STYLES.find((s) => s.value === b.layout_type)?.label ?? b.layout_type}
+          </span>
         </div>
       </header>
 
       <p className="mt-5 text-sm text-muted-foreground">
-        This layout was generated from your booking details. Move, rotate, add or remove items, then continue to the required documents. Your changes are saved when you continue.
+        This layout was generated from your booking details. Move, rotate, add or remove items, then
+        continue to the required documents. Your changes are saved when you continue.
       </p>
 
       <div className="mt-6">
@@ -91,7 +118,9 @@ function FloorPlanPage() {
               attendees={b.attendees}
               canEdit={b.canEdit}
               onSave={onSave}
-              onContinue={() => navigate({ to: "/documents/$bookingId", params: { bookingId: String(id) } })}
+              onContinue={() =>
+                navigate({ to: "/documents/$bookingId", params: { bookingId: String(id) } })
+              }
               continueLabel={isStaff ? "View documents" : "Continue to documents"}
               fileName={`floor-plan-booking-${b.id}`}
             />

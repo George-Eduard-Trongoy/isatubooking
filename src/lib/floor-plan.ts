@@ -68,21 +68,221 @@ export type PaletteEntry = {
 };
 
 export const PALETTE: PaletteEntry[] = [
-  { key: "round_table", group: "Tables", label: "Round table", hint: "Seats 8", template: { type: "round_table", name: "Round Table", radius: 35, seats: 8, color: PLAN_COLORS.table, stroke: PLAN_COLORS.tableStroke } },
-  { key: "rect_table", group: "Tables", label: "Long table", hint: "Seats 3", template: { type: "rect_table", name: "Table", width: 110, height: 36, seats: 3, color: PLAN_COLORS.table, stroke: PLAN_COLORS.tableStroke } },
-  { key: "head_table", group: "Tables", label: "Head table", hint: "Seats 6", template: { type: "rect_table", name: "Head Table", width: 220, height: 44, seats: 6, color: PLAN_COLORS.goldSoft, stroke: PLAN_COLORS.gold } },
-  { key: "cocktail_table", group: "Tables", label: "High-top", hint: "Standing", template: { type: "cocktail_table", name: "High-top", radius: 22, seats: 0, color: PLAN_COLORS.goldSoft, stroke: PLAN_COLORS.gold } },
-  { key: "chair", group: "Seating", label: "Chair", hint: "1 seat", template: { type: "chair", name: "Chair", width: 26, height: 24, seats: 1, color: PLAN_COLORS.chair, stroke: PLAN_COLORS.chairStroke } },
-  { key: "sofa", group: "Seating", label: "Lounge sofa", hint: "Seats 3", template: { type: "sofa", name: "Lounge Sofa", width: 120, height: 45, seats: 3, color: PLAN_COLORS.chair, stroke: PLAN_COLORS.chairStroke } },
-  { key: "stage", group: "Stage and AV", label: "Stage", hint: "Main platform", template: { type: "stage", name: "Stage", width: 260, height: 65, color: PLAN_COLORS.ink, textColor: PLAN_COLORS.inkText } },
-  { key: "podium", group: "Stage and AV", label: "Podium", hint: "Speaker", template: { type: "podium", name: "Podium", width: 50, height: 34, color: PLAN_COLORS.gold, textColor: PLAN_COLORS.ink } },
-  { key: "screen", group: "Stage and AV", label: "Screen", hint: "Projector", template: { type: "screen", name: "Screen", width: 160, height: 16, color: PLAN_COLORS.slate, textColor: PLAN_COLORS.inkText } },
-  { key: "av_booth", group: "Stage and AV", label: "AV console", hint: "Sound and lights", template: { type: "rect_table", name: "AV Console", width: 110, height: 36, seats: 0, color: PLAN_COLORS.slate, textColor: PLAN_COLORS.inkText } },
-  { key: "buffet", group: "Room features", label: "Buffet", hint: "Food station", template: { type: "buffet", name: "Buffet Station", width: 200, height: 40, color: PLAN_COLORS.goldSoft, stroke: PLAN_COLORS.gold } },
-  { key: "bar", group: "Room features", label: "Drinks bar", hint: "Beverages", template: { type: "buffet", name: "Beverage Bar", width: 180, height: 40, color: PLAN_COLORS.goldSoft, stroke: PLAN_COLORS.gold } },
-  { key: "door", group: "Room features", label: "Entrance", hint: "Door", template: { type: "door", name: "Entrance", width: 90, height: 26, color: PLAN_COLORS.green, textColor: PLAN_COLORS.inkText } },
-  { key: "emergency_exit", group: "Room features", label: "Fire exit", hint: "Keep clear", template: { type: "emergency_exit", name: "Fire Exit", width: 80, height: 26, color: PLAN_COLORS.red, textColor: PLAN_COLORS.inkText } },
-  { key: "plant", group: "Room features", label: "Plant", hint: "Decor", template: { type: "plant", name: "Plant", radius: 16, seats: 0, color: PLAN_COLORS.plant, stroke: PLAN_COLORS.plantStroke } },
+  {
+    key: "round_table",
+    group: "Tables",
+    label: "Round table",
+    hint: "Seats 8",
+    template: {
+      type: "round_table",
+      name: "Round Table",
+      radius: 35,
+      seats: 8,
+      color: PLAN_COLORS.table,
+      stroke: PLAN_COLORS.tableStroke,
+    },
+  },
+  {
+    key: "rect_table",
+    group: "Tables",
+    label: "Long table",
+    hint: "Seats 3",
+    template: {
+      type: "rect_table",
+      name: "Table",
+      width: 110,
+      height: 36,
+      seats: 3,
+      color: PLAN_COLORS.table,
+      stroke: PLAN_COLORS.tableStroke,
+    },
+  },
+  {
+    key: "head_table",
+    group: "Tables",
+    label: "Head table",
+    hint: "Seats 6",
+    template: {
+      type: "rect_table",
+      name: "Head Table",
+      width: 220,
+      height: 44,
+      seats: 6,
+      color: PLAN_COLORS.goldSoft,
+      stroke: PLAN_COLORS.gold,
+    },
+  },
+  {
+    key: "cocktail_table",
+    group: "Tables",
+    label: "High-top",
+    hint: "Standing",
+    template: {
+      type: "cocktail_table",
+      name: "High-top",
+      radius: 22,
+      seats: 0,
+      color: PLAN_COLORS.goldSoft,
+      stroke: PLAN_COLORS.gold,
+    },
+  },
+  {
+    key: "chair",
+    group: "Seating",
+    label: "Chair",
+    hint: "1 seat",
+    template: {
+      type: "chair",
+      name: "Chair",
+      width: 26,
+      height: 24,
+      seats: 1,
+      color: PLAN_COLORS.chair,
+      stroke: PLAN_COLORS.chairStroke,
+    },
+  },
+  {
+    key: "sofa",
+    group: "Seating",
+    label: "Lounge sofa",
+    hint: "Seats 3",
+    template: {
+      type: "sofa",
+      name: "Lounge Sofa",
+      width: 120,
+      height: 45,
+      seats: 3,
+      color: PLAN_COLORS.chair,
+      stroke: PLAN_COLORS.chairStroke,
+    },
+  },
+  {
+    key: "stage",
+    group: "Stage and AV",
+    label: "Stage",
+    hint: "Main platform",
+    template: {
+      type: "stage",
+      name: "Stage",
+      width: 260,
+      height: 65,
+      color: PLAN_COLORS.ink,
+      textColor: PLAN_COLORS.inkText,
+    },
+  },
+  {
+    key: "podium",
+    group: "Stage and AV",
+    label: "Podium",
+    hint: "Speaker",
+    template: {
+      type: "podium",
+      name: "Podium",
+      width: 50,
+      height: 34,
+      color: PLAN_COLORS.gold,
+      textColor: PLAN_COLORS.ink,
+    },
+  },
+  {
+    key: "screen",
+    group: "Stage and AV",
+    label: "Screen",
+    hint: "Projector",
+    template: {
+      type: "screen",
+      name: "Screen",
+      width: 160,
+      height: 16,
+      color: PLAN_COLORS.slate,
+      textColor: PLAN_COLORS.inkText,
+    },
+  },
+  {
+    key: "av_booth",
+    group: "Stage and AV",
+    label: "AV console",
+    hint: "Sound and lights",
+    template: {
+      type: "rect_table",
+      name: "AV Console",
+      width: 110,
+      height: 36,
+      seats: 0,
+      color: PLAN_COLORS.slate,
+      textColor: PLAN_COLORS.inkText,
+    },
+  },
+  {
+    key: "buffet",
+    group: "Room features",
+    label: "Buffet",
+    hint: "Food station",
+    template: {
+      type: "buffet",
+      name: "Buffet Station",
+      width: 200,
+      height: 40,
+      color: PLAN_COLORS.goldSoft,
+      stroke: PLAN_COLORS.gold,
+    },
+  },
+  {
+    key: "bar",
+    group: "Room features",
+    label: "Drinks bar",
+    hint: "Beverages",
+    template: {
+      type: "buffet",
+      name: "Beverage Bar",
+      width: 180,
+      height: 40,
+      color: PLAN_COLORS.goldSoft,
+      stroke: PLAN_COLORS.gold,
+    },
+  },
+  {
+    key: "door",
+    group: "Room features",
+    label: "Entrance",
+    hint: "Door",
+    template: {
+      type: "door",
+      name: "Entrance",
+      width: 90,
+      height: 26,
+      color: PLAN_COLORS.green,
+      textColor: PLAN_COLORS.inkText,
+    },
+  },
+  {
+    key: "emergency_exit",
+    group: "Room features",
+    label: "Fire exit",
+    hint: "Keep clear",
+    template: {
+      type: "emergency_exit",
+      name: "Fire Exit",
+      width: 80,
+      height: 26,
+      color: PLAN_COLORS.red,
+      textColor: PLAN_COLORS.inkText,
+    },
+  },
+  {
+    key: "plant",
+    group: "Room features",
+    label: "Plant",
+    hint: "Decor",
+    template: {
+      type: "plant",
+      name: "Plant",
+      radius: 16,
+      seats: 0,
+      color: PLAN_COLORS.plant,
+      stroke: PLAN_COLORS.plantStroke,
+    },
+  },
 ];
 
 export function isRound(type: string): boolean {
@@ -91,7 +291,9 @@ export function isRound(type: string): boolean {
 
 /** Item types whose seat count the user can change. */
 export function hasAdjustableSeats(type: string): boolean {
-  return type === "round_table" || type === "rect_table" || type === "cocktail_table" || type === "sofa";
+  return (
+    type === "round_table" || type === "rect_table" || type === "cocktail_table" || type === "sofa"
+  );
 }
 
 export function seatsOf(item: PlanItem): number {
@@ -130,7 +332,10 @@ export function chairMarks(item: PlanItem): ChairMark[] {
   const front = Math.min(seats, perSide);
   const back = seats > perSide ? seats - front : 0;
   const row = (n: number, y: number) =>
-    Array.from({ length: n }, (_, i) => ({ x: Math.round((-w / 2 + (w * (i + 0.5)) / n) * 10) / 10, y }));
+    Array.from({ length: n }, (_, i) => ({
+      x: Math.round((-w / 2 + (w * (i + 0.5)) / n) * 10) / 10,
+      y,
+    }));
   return [...row(front, h / 2 + 9), ...row(back, -h / 2 - 9)];
 }
 
@@ -168,15 +373,79 @@ export function generateRecommendedLayout(
 
   // Fixed room features
   if (style === "ushape") {
-    add({ type: "screen", name: "Projection Screen", x: 490, y: 50, width: 220, height: 16, color: PLAN_COLORS.slate, textColor: PLAN_COLORS.inkText });
-    add({ type: "rect_table", name: "AV Console", x: 880, y: 50, width: 110, height: 34, seats: 0, color: PLAN_COLORS.slate, textColor: PLAN_COLORS.inkText });
+    add({
+      type: "screen",
+      name: "Projection Screen",
+      x: 490,
+      y: 50,
+      width: 220,
+      height: 16,
+      color: PLAN_COLORS.slate,
+      textColor: PLAN_COLORS.inkText,
+    });
+    add({
+      type: "rect_table",
+      name: "AV Console",
+      x: 880,
+      y: 50,
+      width: 110,
+      height: 34,
+      seats: 0,
+      color: PLAN_COLORS.slate,
+      textColor: PLAN_COLORS.inkText,
+    });
   } else {
-    add({ type: "stage", name: "Main Stage", x: 490, y: 65, width: 300, height: 70, color: PLAN_COLORS.ink, textColor: PLAN_COLORS.inkText });
-    add({ type: "podium", name: "Podium", x: 490, y: 130, width: 54, height: 34, color: PLAN_COLORS.gold, textColor: PLAN_COLORS.ink });
+    add({
+      type: "stage",
+      name: "Main Stage",
+      x: 490,
+      y: 65,
+      width: 300,
+      height: 70,
+      color: PLAN_COLORS.ink,
+      textColor: PLAN_COLORS.inkText,
+    });
+    add({
+      type: "podium",
+      name: "Podium",
+      x: 490,
+      y: 130,
+      width: 54,
+      height: 34,
+      color: PLAN_COLORS.gold,
+      textColor: PLAN_COLORS.ink,
+    });
   }
-  add({ type: "door", name: "Entrance A", x: 105, y: 595, width: 90, height: 28, color: PLAN_COLORS.green, textColor: PLAN_COLORS.inkText });
-  add({ type: "door", name: "Entrance B", x: 875, y: 595, width: 90, height: 28, color: PLAN_COLORS.green, textColor: PLAN_COLORS.inkText });
-  add({ type: "emergency_exit", name: "Fire Exit", x: 70, y: 40, width: 80, height: 26, color: PLAN_COLORS.red, textColor: PLAN_COLORS.inkText });
+  add({
+    type: "door",
+    name: "Entrance A",
+    x: 105,
+    y: 595,
+    width: 90,
+    height: 28,
+    color: PLAN_COLORS.green,
+    textColor: PLAN_COLORS.inkText,
+  });
+  add({
+    type: "door",
+    name: "Entrance B",
+    x: 875,
+    y: 595,
+    width: 90,
+    height: 28,
+    color: PLAN_COLORS.green,
+    textColor: PLAN_COLORS.inkText,
+  });
+  add({
+    type: "emergency_exit",
+    name: "Fire Exit",
+    x: 70,
+    y: 40,
+    width: 80,
+    height: 26,
+    color: PLAN_COLORS.red,
+    textColor: PLAN_COLORS.inkText,
+  });
 
   if (style === "banquet") {
     const count = Math.max(2, Math.ceil(pax / 8));
@@ -186,16 +455,44 @@ export function generateRecommendedLayout(
       const r = Math.floor(i / cols);
       const inRow = Math.min(cols, count - r * cols);
       const rowXs = inRow === cols ? xs : centeredColumns(inRow, 160);
-      add({ type: "round_table", name: `Table ${i + 1}`, x: rowXs[i % cols]!, y: 225 + r * 105, radius: 36, seats: 8, color: table, stroke: tableStroke });
+      add({
+        type: "round_table",
+        name: `Table ${i + 1}`,
+        x: rowXs[i % cols]!,
+        y: 225 + r * 105,
+        radius: 36,
+        seats: 8,
+        color: table,
+        stroke: tableStroke,
+      });
     }
-    add({ type: "buffet", name: "Buffet Station", x: 490, y: 560, width: 280, height: 40, color: PLAN_COLORS.goldSoft, stroke: PLAN_COLORS.gold });
+    add({
+      type: "buffet",
+      name: "Buffet Station",
+      x: 490,
+      y: 560,
+      width: 280,
+      height: 40,
+      color: PLAN_COLORS.goldSoft,
+      stroke: PLAN_COLORS.gold,
+    });
   } else if (style === "classroom") {
     const count = Math.ceil(pax / 4);
     const cols = Math.min(5, count);
     const xs = centeredColumns(cols, 160);
     for (let i = 0; i < count; i++) {
       const r = Math.floor(i / cols);
-      add({ type: "rect_table", name: `Desk ${i + 1}`, x: xs[i % cols]!, y: 200 + r * 70, width: 136, height: 34, seats: 4, color: table, stroke: tableStroke });
+      add({
+        type: "rect_table",
+        name: `Desk ${i + 1}`,
+        x: xs[i % cols]!,
+        y: 200 + r * 70,
+        width: 136,
+        height: 34,
+        seats: 4,
+        color: table,
+        stroke: tableStroke,
+      });
     }
   } else if (style === "ushape") {
     // Outer U of conference tables; a second, inner U is added for larger groups.
@@ -207,7 +504,8 @@ export function generateRecommendedLayout(
       const span = right - left - 120;
       const count = Math.max(1, Math.floor((span + 4) / 104));
       const start = (left + right) / 2 - ((count - 1) * 104) / 2;
-      for (let i = 0; i < count; i++) slots.push({ x: Math.round(start + i * 104), y: bottom, rotation: 0 });
+      for (let i = 0; i < count; i++)
+        slots.push({ x: Math.round(start + i * 104), y: bottom, rotation: 0 });
       return slots;
     };
     const outer = ring(170, 810, 140, 545);
@@ -217,7 +515,18 @@ export function generateRecommendedLayout(
     const needed = Math.ceil(pax / seatsPer);
     const slots = [...outer, ...inner].slice(0, needed);
     slots.forEach((s, i) =>
-      add({ type: "rect_table", name: `Table ${i + 1}`, x: s.x, y: s.y, rotation: s.rotation, width: 100, height: 36, seats: seatsPer, color: table, stroke: tableStroke }),
+      add({
+        type: "rect_table",
+        name: `Table ${i + 1}`,
+        x: s.x,
+        y: s.y,
+        rotation: s.rotation,
+        width: 100,
+        height: 36,
+        seats: seatsPer,
+        color: table,
+        stroke: tableStroke,
+      }),
     );
   } else if (style === "cocktail") {
     const count = Math.ceil(pax / 5);
@@ -226,11 +535,48 @@ export function generateRecommendedLayout(
     for (let i = 0; i < count; i++) {
       const c = i % cols;
       const r = Math.floor(i / cols);
-      add({ type: "cocktail_table", name: `High-top ${i + 1}`, x: xs[c]! - 15 + (r % 2) * 30, y: 220 + r * 72, radius: 22, seats: 0, color: PLAN_COLORS.goldSoft, stroke: PLAN_COLORS.gold });
+      add({
+        type: "cocktail_table",
+        name: `High-top ${i + 1}`,
+        x: xs[c]! - 15 + (r % 2) * 30,
+        y: 220 + r * 72,
+        radius: 22,
+        seats: 0,
+        color: PLAN_COLORS.goldSoft,
+        stroke: PLAN_COLORS.gold,
+      });
     }
-    add({ type: "buffet", name: "Beverage Bar", x: 490, y: 560, width: 240, height: 40, color: PLAN_COLORS.goldSoft, stroke: PLAN_COLORS.gold });
-    add({ type: "sofa", name: "Lounge Sofa", x: 900, y: 300, rotation: 90, width: 120, height: 45, seats: 3, color: PLAN_COLORS.chair, stroke: PLAN_COLORS.chairStroke });
-    add({ type: "plant", name: "Plant", x: 60, y: 300, radius: 16, color: PLAN_COLORS.plant, stroke: PLAN_COLORS.plantStroke });
+    add({
+      type: "buffet",
+      name: "Beverage Bar",
+      x: 490,
+      y: 560,
+      width: 240,
+      height: 40,
+      color: PLAN_COLORS.goldSoft,
+      stroke: PLAN_COLORS.gold,
+    });
+    add({
+      type: "sofa",
+      name: "Lounge Sofa",
+      x: 900,
+      y: 300,
+      rotation: 90,
+      width: 120,
+      height: 45,
+      seats: 3,
+      color: PLAN_COLORS.chair,
+      stroke: PLAN_COLORS.chairStroke,
+    });
+    add({
+      type: "plant",
+      name: "Plant",
+      x: 60,
+      y: 300,
+      radius: 16,
+      color: PLAN_COLORS.plant,
+      stroke: PLAN_COLORS.plantStroke,
+    });
   } else {
     // theater: chair rows sized to the attendee count, with a center aisle
     const cols = 15;
@@ -240,7 +586,17 @@ export function generateRecommendedLayout(
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols && placed < pax; c++) {
         const aisle = c >= 8 ? 30 : 0;
-        add({ type: "chair", name: `Row ${r + 1} Seat ${c + 1}`, x: Math.round(startX + c * 38 + aisle), y: 200 + r * 36, width: 26, height: 24, seats: 1, color: PLAN_COLORS.chair, stroke: PLAN_COLORS.chairStroke });
+        add({
+          type: "chair",
+          name: `Row ${r + 1} Seat ${c + 1}`,
+          x: Math.round(startX + c * 38 + aisle),
+          y: 200 + r * 36,
+          width: 26,
+          height: 24,
+          seats: 1,
+          color: PLAN_COLORS.chair,
+          stroke: PLAN_COLORS.chairStroke,
+        });
         placed++;
       }
     }

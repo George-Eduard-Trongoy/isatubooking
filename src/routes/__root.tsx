@@ -11,7 +11,6 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/hooks/use-auth";
 import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { Toaster } from "@/components/ui/sonner";
@@ -39,16 +38,17 @@ function NotFoundComponent() {
 }
 
 function ErrorComponent({ error, reset }: ErrorComponentProps) {
-  console.error(error);
   const router = useRouter();
   useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    console.error("[Root Error]", error);
   }, [error]);
 
   return (
     <div className="flex min-h-[70vh] items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">This page didn't load</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+          This page didn't load
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Something went wrong on our end. You can try refreshing or head back home.
         </p>
@@ -82,13 +82,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "ISATU Booking | Venues and Accommodation" },
       {
         name: "description",
-        content: "Reserve ISATU event venues and campus guest rooms at the HRT Center and TLE Service Center.",
+        content:
+          "Reserve ISATU event venues and campus guest rooms at the HRT Center and TLE Service Center.",
       },
       { name: "author", content: "ISATU" },
       { property: "og:title", content: "ISATU Booking | Venues and Accommodation" },
       {
         property: "og:description",
-        content: "Reserve ISATU event venues and campus guest rooms at the HRT Center and TLE Service Center.",
+        content:
+          "Reserve ISATU event venues and campus guest rooms at the HRT Center and TLE Service Center.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

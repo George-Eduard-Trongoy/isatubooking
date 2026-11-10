@@ -32,7 +32,13 @@ const paymentStyles: Record<string, { label: string; cls: string }> = {
 export function PaymentBadge({ status, className }: { status: string; className?: string }) {
   const s = paymentStyles[status] ?? paymentStyles["unpaid"]!;
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset", s.cls, className)}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset",
+        s.cls,
+        className,
+      )}
+    >
       <span className="size-1.5 rounded-full bg-current" />
       {s.label}
     </span>
@@ -55,14 +61,22 @@ export function PageIntro({
       <div className="max-w-2xl">
         <p className="eyebrow text-gold">{eyebrow}</p>
         <h1 className="mt-3 text-3xl font-semibold text-foreground md:text-4xl">{title}</h1>
-        {description && <p className="mt-3 text-[0.95rem] leading-relaxed text-muted-foreground">{description}</p>}
+        {description && (
+          <p className="mt-3 text-[0.95rem] leading-relaxed text-muted-foreground">{description}</p>
+        )}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </div>
   );
 }
 
-export function FormMessage({ tone, children }: { tone: "error" | "success" | "info"; children: React.ReactNode }) {
+export function FormMessage({
+  tone,
+  children,
+}: {
+  tone: "error" | "success" | "info";
+  children: React.ReactNode;
+}) {
   return (
     <div
       role={tone === "error" ? "alert" : "status"}

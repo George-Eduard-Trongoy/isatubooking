@@ -1,0 +1,5 @@
+{
+  "name": "ISATU Booking",
+  "description": "University venues and guest rooms booking portal for Iloilo Science and Technology University",
+  "capabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

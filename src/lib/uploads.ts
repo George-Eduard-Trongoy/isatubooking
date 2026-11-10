@@ -19,7 +19,14 @@ export async function preparePhoto(file: File, maxSide = 2200): Promise<File> {
   }
 }
 
-export async function uploadToSignedUrl(bucket: string, path: string, token: string, file: File): Promise<boolean> {
-  const { error } = await supabase.storage.from(bucket).uploadToSignedUrl(path, token, file, { contentType: file.type, upsert: false });
+export async function uploadToSignedUrl(
+  bucket: string,
+  path: string,
+  token: string,
+  file: File,
+): Promise<boolean> {
+  const { error } = await supabase.storage
+    .from(bucket)
+    .uploadToSignedUrl(path, token, file, { contentType: file.type, upsert: false });
   return !error;
 }

@@ -43,30 +43,67 @@ function AccountPage() {
       setBusy(false);
       return setError("Your current password is incorrect.");
     }
-    const { error: err } = await supabase.auth.updateUser({ password: next, current_password: current } as never);
+    const { error: err } = await supabase.auth.updateUser({
+      password: next,
+      current_password: current,
+    } as never);
     setBusy(false);
     if (err) return setError("Could not update your password. Try a stronger one.");
-    setCurrent(""); setNext(""); setConfirm("");
+    setCurrent("");
+    setNext("");
+    setConfirm("");
     toast.success("Password updated.");
   };
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-14 sm:px-6">
-      <PageIntro eyebrow="Account" title={me?.full_name || "Your account"} description={me ? `${roleLabel(me.role, me.facility_code)} · ${me.email ?? `@${me.username}`}` : undefined} />
-      <form onSubmit={submit} className="mt-10 max-w-md space-y-5 rounded-2xl border border-border bg-card p-6 shadow-soft">
+      <PageIntro
+        eyebrow="Account"
+        title={me?.full_name || "Your account"}
+        description={
+          me
+            ? `${roleLabel(me.role, me.facility_code)} · ${me.email ?? `@${me.username}`}`
+            : undefined
+        }
+      />
+      <form
+        onSubmit={submit}
+        className="mt-10 max-w-md space-y-5 rounded-2xl border border-border bg-card p-6 shadow-soft"
+      >
         <h2 className="text-lg font-semibold">Change password</h2>
         {error && <FormMessage tone="error">{error}</FormMessage>}
         <div className="space-y-2">
           <Label htmlFor="current">Current password</Label>
-          <Input id="current" type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} className="h-11" />
+          <Input
+            id="current"
+            type="password"
+            autoComplete="current-password"
+            value={current}
+            onChange={(e) => setCurrent(e.target.value)}
+            className="h-11"
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="next">New password</Label>
-          <Input id="next" type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} className="h-11" />
+          <Input
+            id="next"
+            type="password"
+            autoComplete="new-password"
+            value={next}
+            onChange={(e) => setNext(e.target.value)}
+            className="h-11"
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="confirm">Confirm new password</Label>
-          <Input id="confirm" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className="h-11" />
+          <Input
+            id="confirm"
+            type="password"
+            autoComplete="new-password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            className="h-11"
+          />
         </div>
         <Button type="submit" disabled={busy} className="w-full">
           {busy && <Loader2 className="animate-spin" />} Update password

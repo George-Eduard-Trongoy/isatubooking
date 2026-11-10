@@ -17,7 +17,13 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   PALETTE,
   STAGE_H,
@@ -45,9 +51,20 @@ type Props = {
 let uid = 0;
 const newId = () => `item_${Date.now().toString(36)}_${(uid++).toString(36)}`;
 
-export default function FloorPlanEditor({ initial, venue, attendees, canEdit, onSave, onContinue, continueLabel = "Continue", fileName }: Props) {
+export default function FloorPlanEditor({
+  initial,
+  venue,
+  attendees,
+  canEdit,
+  onSave,
+  onContinue,
+  continueLabel = "Continue",
+  fileName,
+}: Props) {
   const [items, setItems] = useState<PlanItem[]>(initial.items);
-  const [style, setStyle] = useState<string>(LAYOUT_STYLES.some((s) => s.value === initial.style) ? initial.style : "banquet");
+  const [style, setStyle] = useState<string>(
+    LAYOUT_STYLES.some((s) => s.value === initial.style) ? initial.style : "banquet",
+  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [width, setWidth] = useState(900);
@@ -62,7 +79,10 @@ export default function FloorPlanEditor({ initial, venue, attendees, canEdit, on
   useEffect(() => {
     const el = holderRef.current;
     if (!el) return;
-    const ro = new ResizeObserver((entries) => { const e = entries[0]; if (e) setWidth(e.contentRect.width); });
+    const ro = new ResizeObserver((entries) => {
+      const e = entries[0];
+      if (e) setWidth(e.contentRect.width);
+    });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
@@ -88,7 +108,13 @@ export default function FloorPlanEditor({ initial, venue, attendees, canEdit, on
   const addItem = (key: string) => {
     const p = PALETTE.find((x) => x.key === key);
     if (!p) return;
-    const item: PlanItem = { ...p.template, id: newId(), x: STAGE_W / 2 + (Math.random() * 60 - 30), y: STAGE_H / 2 + (Math.random() * 60 - 30), rotation: 0 };
+    const item: PlanItem = {
+      ...p.template,
+      id: newId(),
+      x: STAGE_W / 2 + (Math.random() * 60 - 30),
+      y: STAGE_H / 2 + (Math.random() * 60 - 30),
+      rotation: 0,
+    };
     setItems((prev) => [...prev, item]);
     setSelectedId(item.id);
     setDirty(true);
@@ -102,7 +128,10 @@ export default function FloorPlanEditor({ initial, venue, attendees, canEdit, on
   }, [selectedId]);
 
   const duplicate = () => {
-    if (!selected) { toast("Select an item first."); return; }
+    if (!selected) {
+      toast("Select an item first.");
+      return;
+    }
     const copy = { ...selected, id: newId(), x: selected.x + 28, y: selected.y + 28 };
     setItems((prev) => [...prev, copy]);
     setSelectedId(copy.id);
@@ -110,7 +139,10 @@ export default function FloorPlanEditor({ initial, venue, attendees, canEdit, on
   };
 
   const rotate = () => {
-    if (!selected) { toast("Select an item first."); return; }
+    if (!selected) {
+      toast("Select an item first.");
+      return;
+    }
     update(selected.id, { rotation: (selected.rotation + 90) % 360 });
   };
 
@@ -177,9 +209,15 @@ export default function FloorPlanEditor({ initial, venue, attendees, canEdit, on
         <div>
           <p className="eyebrow text-muted-foreground">Recommended layout</p>
           <Select value={style} onValueChange={setStyle} disabled={!canEdit}>
-            <SelectTrigger className="mt-3 h-10"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="mt-3 h-10">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
-              {LAYOUT_STYLES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+              {LAYOUT_STYLES.map((s) => (
+                <SelectItem key={s.value} value={s.value}>
+                  {s.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Button variant="soft" className="mt-2 w-full" onClick={regenerate} disabled={!canEdit}>
@@ -210,15 +248,50 @@ export default function FloorPlanEditor({ initial, venue, attendees, canEdit, on
       <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
           <div className="flex items-center gap-1">
-            <Button size="icon" variant="outline" onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.15).toFixed(2)))} aria-label="Zoom out"><Minus /></Button>
-            <Button size="sm" variant="ghost" onClick={() => setZoom(1)} className="w-14 font-semibold">{Math.round(zoom * 100)}%</Button>
-            <Button size="icon" variant="outline" onClick={() => setZoom((z) => Math.min(2, +(z + 0.15).toFixed(2)))} aria-label="Zoom in"><Plus /></Button>
+            <Button
+              size="icon"
+              variant="outline"
+              onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.15).toFixed(2)))}
+              aria-label="Zoom out"
+            >
+              <Minus />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setZoom(1)}
+              className="w-14 font-semibold"
+            >
+              {Math.round(zoom * 100)}%
+            </Button>
+            <Button
+              size="icon"
+              variant="outline"
+              onClick={() => setZoom((z) => Math.min(2, +(z + 0.15).toFixed(2)))}
+              aria-label="Zoom in"
+            >
+              <Plus />
+            </Button>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
-            <Button size="sm" variant="outline" onClick={rotate} disabled={!canEdit}><RotateCw /> Rotate</Button>
-            <Button size="sm" variant="outline" onClick={duplicate} disabled={!canEdit}><Copy /> Duplicate</Button>
-            <Button size="sm" variant="outline" onClick={removeSelected} disabled={!canEdit || !selected} className="text-destructive"><Trash2 /> Delete</Button>
-            <Button size="sm" variant="ghost" onClick={clearAll} disabled={!canEdit}><Eraser /> Clear</Button>
+            <Button size="sm" variant="outline" onClick={rotate} disabled={!canEdit}>
+              <RotateCw /> Rotate
+            </Button>
+            <Button size="sm" variant="outline" onClick={duplicate} disabled={!canEdit}>
+              <Copy /> Duplicate
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={removeSelected}
+              disabled={!canEdit || !selected}
+              className="text-destructive"
+            >
+              <Trash2 /> Delete
+            </Button>
+            <Button size="sm" variant="ghost" onClick={clearAll} disabled={!canEdit}>
+              <Eraser /> Clear
+            </Button>
           </div>
         </div>
 
@@ -227,7 +300,9 @@ export default function FloorPlanEditor({ initial, venue, attendees, canEdit, on
             Seats <b className={seats > cap ? "text-destructive" : "text-foreground"}>{seats}</b>
             <span className="text-muted-foreground"> / {cap}</span>
           </span>
-          <span className="rounded-full bg-card px-3 py-1 ring-1 ring-border">Items <b>{items.length}</b></span>
+          <span className="rounded-full bg-card px-3 py-1 ring-1 ring-border">
+            Items <b>{items.length}</b>
+          </span>
           {selected ? (
             <span className="flex items-center gap-2">
               <span className="text-muted-foreground">Label</span>
@@ -239,28 +314,51 @@ export default function FloorPlanEditor({ initial, venue, attendees, canEdit, on
               />
             </span>
           ) : (
-            <span className="text-muted-foreground">Click an item to select it. Drag to move, use the handles to rotate or resize.</span>
+            <span className="text-muted-foreground">
+              Click an item to select it. Drag to move, use the handles to rotate or resize.
+            </span>
           )}
         </div>
 
-        <div ref={holderRef} className="overflow-auto bg-grid" style={{ height: Math.max(360, STAGE_H * fit) }}>
+        <div
+          ref={holderRef}
+          className="overflow-auto bg-grid"
+          style={{ height: Math.max(360, STAGE_H * fit) }}
+        >
           <Stage
             ref={stageRef}
             width={STAGE_W * scale}
             height={STAGE_H * scale}
             scaleX={scale}
             scaleY={scale}
-            onMouseDown={(e) => { if (e.target === e.target.getStage()) setSelectedId(null); }}
-            onTouchStart={(e) => { if (e.target === e.target.getStage()) setSelectedId(null); }}
+            onMouseDown={(e) => {
+              if (e.target === e.target.getStage()) setSelectedId(null);
+            }}
+            onTouchStart={(e) => {
+              if (e.target === e.target.getStage()) setSelectedId(null);
+            }}
           >
             <Layer>
-              <Rect x={0} y={0} width={STAGE_W} height={STAGE_H} fill="#ffffff" stroke="#d9dce4" strokeWidth={2} cornerRadius={6} listening={false} />
+              <Rect
+                x={0}
+                y={0}
+                width={STAGE_W}
+                height={STAGE_H}
+                fill="#ffffff"
+                stroke="#d9dce4"
+                strokeWidth={2}
+                cornerRadius={6}
+                listening={false}
+              />
               {items.map((item) => (
                 <PlanShape
                   key={item.id}
                   item={item}
                   draggable={canEdit}
-                  registerRef={(n) => { if (n) nodeRefs.current.set(item.id, n); else nodeRefs.current.delete(item.id); }}
+                  registerRef={(n) => {
+                    if (n) nodeRefs.current.set(item.id, n);
+                    else nodeRefs.current.delete(item.id);
+                  }}
                   onSelect={() => setSelectedId(item.id)}
                   onChange={(patch) => update(item.id, patch)}
                 />
@@ -275,7 +373,9 @@ export default function FloorPlanEditor({ initial, venue, attendees, canEdit, on
                 anchorFill="#ffffff"
                 borderDash={[4, 4]}
                 enabledAnchors={["top-left", "top-right", "bottom-left", "bottom-right"]}
-                boundBoxFunc={(oldBox, newBox) => (newBox.width < 12 || newBox.height < 12 ? oldBox : newBox)}
+                boundBoxFunc={(oldBox, newBox) =>
+                  newBox.width < 12 || newBox.height < 12 ? oldBox : newBox
+                }
               />
             </Layer>
           </Stage>
@@ -283,17 +383,31 @@ export default function FloorPlanEditor({ initial, venue, attendees, canEdit, on
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3">
           <p className="text-xs text-muted-foreground">
-            {canEdit ? (dirty ? "You have unsaved changes." : "All changes saved.") : "This booking is closed, so the floor plan is read-only."}
+            {canEdit
+              ? dirty
+                ? "You have unsaved changes."
+                : "All changes saved."
+              : "This booking is closed, so the floor plan is read-only."}
           </p>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={exportPng}><Download /> Export PNG</Button>
+            <Button variant="outline" onClick={exportPng}>
+              <Download /> Export PNG
+            </Button>
             {canEdit && (
-              <Button variant={onContinue ? "outline" : "gold"} onClick={save} disabled={saving || !dirty}>
+              <Button
+                variant={onContinue ? "outline" : "gold"}
+                onClick={save}
+                disabled={saving || !dirty}
+              >
                 {saving ? <Loader2 className="animate-spin" /> : <Save />} Save floor plan
               </Button>
             )}
             {onContinue && (
-              <Button variant={canEdit ? "default" : "gold"} onClick={saveAndContinue} disabled={saving}>
+              <Button
+                variant={canEdit ? "default" : "gold"}
+                onClick={saveAndContinue}
+                disabled={saving}
+              >
                 {canEdit && dirty ? "Save and continue" : continueLabel} <ArrowRight />
               </Button>
             )}
@@ -343,7 +457,11 @@ function PlanShape({
         const sy = node.scaleY();
         node.scaleX(1);
         node.scaleY(1);
-        const patch: Partial<PlanItem> = { x: Math.round(node.x()), y: Math.round(node.y()), rotation: Math.round(node.rotation()) };
+        const patch: Partial<PlanItem> = {
+          x: Math.round(node.x()),
+          y: Math.round(node.y()),
+          rotation: Math.round(node.rotation()),
+        };
         if (round) patch.radius = Math.max(6, Math.round(r * Math.max(sx, sy)));
         else {
           patch.width = Math.max(10, Math.round(w * sx));
@@ -353,9 +471,31 @@ function PlanShape({
       }}
     >
       {round ? (
-        <Circle radius={r} fill={fill} stroke={stroke} strokeWidth={2} shadowColor="#1b2440" shadowOpacity={0.12} shadowBlur={8} shadowOffsetY={3} />
+        <Circle
+          radius={r}
+          fill={fill}
+          stroke={stroke}
+          strokeWidth={2}
+          shadowColor="#1b2440"
+          shadowOpacity={0.12}
+          shadowBlur={8}
+          shadowOffsetY={3}
+        />
       ) : (
-        <Rect x={-w / 2} y={-h / 2} width={w} height={h} cornerRadius={isChair ? 4 : 6} fill={fill} stroke={stroke} strokeWidth={isChair ? 1.5 : 2} shadowColor="#1b2440" shadowOpacity={isChair ? 0 : 0.08} shadowBlur={6} shadowOffsetY={2} />
+        <Rect
+          x={-w / 2}
+          y={-h / 2}
+          width={w}
+          height={h}
+          cornerRadius={isChair ? 4 : 6}
+          fill={fill}
+          stroke={stroke}
+          strokeWidth={isChair ? 1.5 : 2}
+          shadowColor="#1b2440"
+          shadowOpacity={isChair ? 0 : 0.08}
+          shadowBlur={6}
+          shadowOffsetY={2}
+        />
       )}
       {!isChair && (
         <Text
@@ -363,7 +503,11 @@ function PlanShape({
           y={round ? -6 : -6}
           width={round ? r * 2 : w - 8}
           text={item.name}
-          fontSize={round ? Math.max(8, Math.min(11, r / 3.2)) : Math.min(12, Math.max(8, Math.floor(h / 3.4)))}
+          fontSize={
+            round
+              ? Math.max(8, Math.min(11, r / 3.2))
+              : Math.min(12, Math.max(8, Math.floor(h / 3.4)))
+          }
           fontFamily="Manrope, sans-serif"
           fontStyle="bold"
           fill={textColor}
@@ -381,7 +525,9 @@ function ShapeSwatch({ item }: { item: Omit<PlanItem, "id" | "x" | "y" | "rotati
   const round = isRound(item.type);
   return (
     <span
-      className={round ? "size-5 shrink-0 rounded-full border-2" : "h-3.5 w-5 shrink-0 rounded-sm border-2"}
+      className={
+        round ? "size-5 shrink-0 rounded-full border-2" : "h-3.5 w-5 shrink-0 rounded-sm border-2"
+      }
       style={{ backgroundColor: item.color, borderColor: item.stroke ?? item.color }}
       aria-hidden
     />

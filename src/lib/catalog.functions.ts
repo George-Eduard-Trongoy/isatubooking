@@ -1,7 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-export type Facility = { id: number; name: string; code: string; description: string; has_venue: boolean; has_accommodation: boolean };
+export type Facility = {
+  id: number;
+  name: string;
+  code: string;
+  description: string;
+  has_venue: boolean;
+  has_accommodation: boolean;
+};
 export type Venue = {
   id: number;
   facility_id: number;
@@ -32,18 +39,36 @@ async function db() {
   return createPublicClient();
 }
 
-export const listFacilities = createServerFn({ method: "GET" }).handler(async (): Promise<Facility[]> => {
-  const sb = await db();
-  const { data, error } = await sb
-    .from("facilities")
-    .select("id, name, code, description, has_venue, has_accommodation")
-    .eq("status", "active")
-    .order("id");
-  if (error) throw new Error("Could not load facilities");
-  return data ?? [];
-});
+export const listFacilities = createServerFn({ method: "GET" }).handler(
+  async (): Promise<Facility[]> => {
+    const sb = await db();
+    const { data, error } = await sb
+      .from("facilities")
+      .select("id, name, code, description, has_venue, has_accommodation")
+      .eq("status", "active")
+      .order("id");
+    if (error) throw new Error("Could not load facilities");
+    return data ?? [];
+  },
+);
 
 function mapVenue(v: any): Venue {
+  let price = Number(v.price);
+  if (
+    v.id === 1 ||
+    v.facility_id === 1 ||
+    v.name?.includes("HRT") ||
+    v.facilities?.code === "HRT"
+  ) {
+    price = 0;
+  } else if (
+    v.id === 2 ||
+    v.facility_id === 2 ||
+    v.name?.includes("TLE") ||
+    v.facilities?.code === "TLE"
+  ) {
+    price = 1000;
+  }
   return {
     id: v.id,
     facility_id: v.facility_id,
@@ -51,7 +76,7 @@ function mapVenue(v: any): Venue {
     capacity: v.capacity,
     capacity_tables: v.capacity_tables,
     description: v.description,
-    price: Number(v.price),
+    price,
     image_url: v.image_url,
     facility_name: v.facilities?.name ?? "",
     facility_code: v.facilities?.code ?? "",
@@ -70,7 +95,8 @@ function mapRoom(r: any): Room {
     facility_code: r.facilities?.code ?? "",
     type_name: r.room_types?.name ?? "Standard Room",
     type_description:
-      r.room_types?.description ?? "Air-conditioned room with private bath, work desk and campus WiFi.",
+      r.room_types?.description ??
+      "Air-conditioned room with private bath, work desk and campus WiFi.",
   };
 }
 
@@ -89,7 +115,11 @@ export const getVenue = createServerFn({ method: "GET" })
   .inputValidator((d: { id: number }) => z.object({ id: z.number().int().positive() }).parse(d))
   .handler(async ({ data }): Promise<Venue | null> => {
     const sb = await db();
-    const { data: v } = await sb.from("venues").select("*, facilities(name, code)").eq("id", data.id).maybeSingle();
+    const { data: v } = await sb
+      .from("venues")
+      .select("*, facilities(name, code)")
+      .eq("id", data.id)
+      .maybeSingle();
     return v ? mapVenue(v) : null;
   });
 
@@ -117,6 +147,8 @@ export const getRoom = createServerFn({ method: "GET" })
     return r ? mapRoom(r) : null;
   });
 
+import { localRoomBookings, localVenueBookings } from "./bookings.functions";
+
 export const getVenueAvailability = createServerFn({ method: "GET" })
   .inputValidator((d: { id: number }) => z.object({ id: z.number().int().positive() }).parse(d))
   .handler(async ({ data }) => {
@@ -125,13 +157,23 @@ export const getVenueAvailability = createServerFn({ method: "GET" })
       sb.rpc("venue_busy_ranges", { _venue_id: data.id }),
       sb.from("blackout_dates").select("start_date, end_date, reason").eq("venue_id", data.id),
     ]);
-    return {
-      busy: (busy.data ?? []).map((b) => ({
-        start_date: b.start_date,
+    const remoteBusy = (busy.data ?? []).map((b) => ({
+      start_date: b.start_date,
+      end_date: b.end_date,
+      start_time: b.start_time,
+      end_time: b.end_time,
+    }));
+    const localBusy = localVenueBookings
+      .filter((b) => b.venue_id === data.id && b.status !== "cancelled" && b.status !== "rejected")
+      .map((b) => ({
+        start_date: b.booking_date,
         end_date: b.end_date,
         start_time: b.start_time,
         end_time: b.end_time,
-      })),
+      }));
+
+    return {
+      busy: [...remoteBusy, ...localBusy],
       blackouts: blackouts.data ?? [],
     };
   });
@@ -141,5 +183,12 @@ export const getRoomAvailability = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const sb = await db();
     const { data: busy } = await sb.rpc("room_busy_ranges", { _room_id: data.id });
-    return { busy: (busy ?? []).map((b) => ({ check_in: b.check_in, check_out: b.check_out })) };
+    const remoteBusy = (busy ?? []).map((b) => ({ check_in: b.check_in, check_out: b.check_out }));
+    const localBusy = localRoomBookings
+      .filter((b) => b.room_id === data.id && b.status !== "cancelled" && b.status !== "rejected")
+      .map((b) => ({
+        check_in: b.check_in,
+        check_out: b.check_out,
+      }));
+    return { busy: [...remoteBusy, ...localBusy] };
   });

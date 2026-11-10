@@ -19,9 +19,16 @@ export const Route = createFileRoute("/rooms")({
   head: () => ({
     meta: [
       { title: "Campus Guest Rooms | ISATU Booking" },
-      { name: "description", content: "Reserve one of 11 air-conditioned guest rooms at the HRT Center and TLE Service Center." },
+      {
+        name: "description",
+        content:
+          "Reserve one of 11 air-conditioned guest rooms at the HRT Center and TLE Service Center.",
+      },
       { property: "og:title", content: "Campus Guest Rooms | ISATU Booking" },
-      { property: "og:description", content: "Suites and deluxe rooms on campus with WiFi, hot shower and special requests." },
+      {
+        property: "og:description",
+        content: "Suites and deluxe rooms on campus with WiFi, hot shower and special requests.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -39,7 +46,10 @@ function RoomsPage() {
   const filters = [
     { key: "all", label: `All rooms (${rooms.length})` },
     { key: "hrt", label: `HRT Center (${rooms.filter((r) => r.facility_code === "HRT").length})` },
-    { key: "tle", label: `TLE Service Center (${rooms.filter((r) => r.facility_code === "TLE").length})` },
+    {
+      key: "tle",
+      label: `TLE Service Center (${rooms.filter((r) => r.facility_code === "TLE").length})`,
+    },
   ];
 
   const visible = useMemo(() => {
@@ -83,7 +93,12 @@ function RoomsPage() {
         </div>
         <div className="relative md:ml-auto md:w-72">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search room number or type" className="h-10 rounded-full pl-9" />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search room number or type"
+            className="h-10 rounded-full pl-9"
+          />
         </div>
       </div>
 
@@ -92,9 +107,16 @@ function RoomsPage() {
       ) : (
         <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((r) => (
-            <article key={r.id} className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft transition-shadow hover:shadow-lift">
+            <article
+              key={r.id}
+              className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft transition-shadow hover:shadow-lift"
+            >
               <div className="relative aspect-[4/3] overflow-hidden">
-                <img src={r.image_url} alt={`Room ${r.room_number}`} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                <img
+                  src={r.image_url}
+                  alt={`Room ${r.room_number}`}
+                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
                 <span className="absolute left-3 top-3 rounded-full bg-background/90 px-3 py-1 text-xs font-semibold backdrop-blur">
                   {r.facility_code} · Floor {r.room_number.charAt(0)}
                 </span>
@@ -106,15 +128,25 @@ function RoomsPage() {
                     <p className="text-sm font-medium text-gold">{r.type_name}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-display text-lg font-semibold">{formatPeso(r.price_per_night)}</p>
+                    <p className="font-display text-lg font-semibold">
+                      {formatPeso(r.price_per_night)}
+                    </p>
                     <p className="text-xs text-muted-foreground">per night</p>
                   </div>
                 </div>
-                <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">{r.type_description}</p>
+                <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">
+                  {r.type_description}
+                </p>
                 <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted-foreground">
-                  <span className="inline-flex items-center gap-1"><Users className="size-3.5" /> {r.capacity} guest{r.capacity > 1 ? "s" : ""}</span>
-                  <span className="inline-flex items-center gap-1"><Wifi className="size-3.5" /> WiFi</span>
-                  <span className="inline-flex items-center gap-1"><Snowflake className="size-3.5" /> Air conditioning</span>
+                  <span className="inline-flex items-center gap-1">
+                    <Users className="size-3.5" /> {r.capacity} guest{r.capacity > 1 ? "s" : ""}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Wifi className="size-3.5" /> WiFi
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Snowflake className="size-3.5" /> Air conditioning
+                  </span>
                 </div>
                 <Button asChild variant="default" className="mt-6 w-full">
                   <Link to="/book-room/$roomId" params={{ roomId: String(r.id) }}>

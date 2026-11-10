@@ -49,8 +49,12 @@ export function SiteHeader() {
         <Link to="/" className="flex items-center gap-3">
           <BrandMark />
           <span className="leading-tight">
-            <span className="block font-display text-[0.95rem] font-semibold text-foreground">ISATU Booking</span>
-            <span className="block text-[0.7rem] font-medium text-muted-foreground">Venues and Accommodation</span>
+            <span className="block font-display text-[0.95rem] font-semibold text-foreground">
+              ISATU Booking
+            </span>
+            <span className="block text-[0.7rem] font-medium text-muted-foreground">
+              Venues and Accommodation
+            </span>
           </span>
         </Link>
 
@@ -92,7 +96,9 @@ export function SiteHeader() {
                     {(me?.full_name || "U").slice(0, 1).toUpperCase()}
                   </span>
                   <span className="leading-tight">
-                    <span className="block max-w-36 truncate text-sm font-semibold">{me?.full_name || "Account"}</span>
+                    <span className="block max-w-36 truncate text-sm font-semibold">
+                      {me?.full_name || "Account"}
+                    </span>
                     <span className="block text-[0.7rem] text-muted-foreground">
                       {me ? roleLabel(me.role, me.facility_code) : " "}
                     </span>
@@ -143,12 +149,19 @@ export function SiteHeader() {
         <div className="border-t border-border bg-background px-4 py-3 md:hidden">
           <div className="flex flex-col gap-1" onClick={() => setOpen(false)}>
             {links.map((l) => (
-              <Link key={l.to} to={l.to} className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted">
+              <Link
+                key={l.to}
+                to={l.to}
+                className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
+              >
                 {l.label}
               </Link>
             ))}
             {session && (
-              <Link to="/my-bookings" className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted">
+              <Link
+                to="/my-bookings"
+                className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
+              >
                 My Bookings
               </Link>
             )}
@@ -159,19 +172,31 @@ export function SiteHeader() {
             )}
             {session ? (
               <>
-                <Link to="/account" className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted">
+                <Link
+                  to="/account"
+                  className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
+                >
                   Account
                 </Link>
-                <button onClick={handleSignOut} className="rounded-md px-3 py-2 text-left text-sm font-medium hover:bg-muted">
+                <button
+                  onClick={handleSignOut}
+                  className="rounded-md px-3 py-2 text-left text-sm font-medium hover:bg-muted"
+                >
                   Sign out
                 </button>
               </>
             ) : (
               <>
-                <Link to="/login" className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted">
+                <Link
+                  to="/login"
+                  className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
+                >
                   Sign in
                 </Link>
-                <Link to="/register" className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted">
+                <Link
+                  to="/register"
+                  className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
+                >
                   Create account
                 </Link>
               </>
@@ -190,14 +215,24 @@ export function SiteFooter() {
         <div className="flex items-center gap-3">
           <BrandMark />
           <div className="leading-tight">
-            <p className="font-display text-sm font-semibold">Iloilo Science and Technology University</p>
-            <p className="text-xs text-muted-foreground">HRT Center and TLE Service Center booking portal</p>
+            <p className="font-display text-sm font-semibold">
+              Iloilo Science and Technology University
+            </p>
+            <p className="text-xs text-muted-foreground">
+              HRT Center and TLE Service Center booking portal
+            </p>
           </div>
         </div>
         <div className="flex gap-6 text-sm text-muted-foreground">
-          <Link to="/venues" className="hover:text-foreground">Venues</Link>
-          <Link to="/rooms" className="hover:text-foreground">Rooms</Link>
-          <Link to="/my-bookings" className="hover:text-foreground">My Bookings</Link>
+          <Link to="/venues" className="hover:text-foreground">
+            Venues
+          </Link>
+          <Link to="/rooms" className="hover:text-foreground">
+            Rooms
+          </Link>
+          <Link to="/my-bookings" className="hover:text-foreground">
+            My Bookings
+          </Link>
         </div>
       </div>
     </footer>

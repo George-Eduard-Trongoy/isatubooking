@@ -13,9 +13,15 @@ export const Route = createFileRoute("/register")({
   head: () => ({
     meta: [
       { title: "Create a guest account | ISATU Booking" },
-      { name: "description", content: "Register as a guest to reserve ISATU venues and campus rooms." },
+      {
+        name: "description",
+        content: "Register as a guest to reserve ISATU venues and campus rooms.",
+      },
       { property: "og:title", content: "Create a guest account | ISATU Booking" },
-      { property: "og:description", content: "Register with your email to request venue and room reservations." },
+      {
+        property: "og:description",
+        content: "Register with your email to request venue and room reservations.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -45,18 +51,26 @@ function RegisterPage() {
       options: { emailRedirectTo: window.location.origin, data: { full_name: fullName.trim() } },
     });
     setBusy(false);
-    if (err) return setError(err.message.includes("weak") ? "Please choose a stronger password." : "Could not create the account. Please try again.");
+    if (err)
+      return setError(
+        err.message.includes("weak")
+          ? "Please choose a stronger password."
+          : "Could not create the account. Please try again.",
+      );
     setSent(true);
   };
 
   if (sent) {
     return (
-      <AuthShell title="Check your email" subtitle={`We sent a confirmation link to ${email.trim()}.`}>
+      <AuthShell
+        title="Check your email"
+        subtitle={`We sent a confirmation link to ${email.trim()}.`}
+      >
         <div className="rounded-xl border border-border bg-card p-6 shadow-soft">
           <MailCheck className="size-6 text-gold" />
           <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-            Open the link to activate your account, then sign in. If you booked with us before, your earlier
-            reservations will appear in My Bookings once your email is confirmed.
+            Open the link to activate your account, then sign in. If you booked with us before, your
+            earlier reservations will appear in My Bookings once your email is confirmed.
           </p>
           <Button asChild className="mt-6 w-full">
             <Link to="/login">Go to sign in</Link>
@@ -67,20 +81,43 @@ function RegisterPage() {
   }
 
   return (
-    <AuthShell title="Create a guest account" subtitle="Request venue and room reservations and follow their approval.">
+    <AuthShell
+      title="Create a guest account"
+      subtitle="Request venue and room reservations and follow their approval."
+    >
       <form onSubmit={submit} className="space-y-5">
         {error && <FormMessage tone="error">{error}</FormMessage>}
         <div className="space-y-2">
           <Label htmlFor="full_name">Full name</Label>
-          <Input id="full_name" autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} className="h-11" />
+          <Input
+            id="full_name"
+            autoComplete="name"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            className="h-11"
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="email">Email address</Label>
-          <Input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-11" />
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="h-11"
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className="h-11" />
+          <Input
+            id="password"
+            type="password"
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="h-11"
+          />
           <p className="text-xs text-muted-foreground">At least 8 characters.</p>
         </div>
         <Button type="submit" className="h-11 w-full" disabled={busy}>

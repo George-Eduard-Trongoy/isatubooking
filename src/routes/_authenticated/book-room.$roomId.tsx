@@ -36,7 +36,10 @@ const roomQuery = (id: number) =>
   queryOptions({
     queryKey: ["room", id],
     queryFn: async () => {
-      const [room, availability] = await Promise.all([getRoom({ data: { id } }), getRoomAvailability({ data: { id } })]);
+      const [room, availability] = await Promise.all([
+        getRoom({ data: { id } }),
+        getRoomAvailability({ data: { id } }),
+      ]);
       return { room, availability };
     },
   });
@@ -91,8 +94,12 @@ function BookRoomPage() {
   const checkOut = range?.to ? dateToYmd(range.to) : "";
   const nights = checkIn && checkOut ? daysBetween(checkIn, checkOut) : 0;
   const req = { check_in: checkIn, check_out: checkOut, guests };
-  const liveCheck = checkIn && checkOut ? validateRoomRequest(req, room, busy) : "Select check-in and check-out dates.";
-  const total = checkIn && checkOut ? roomTotal(room.price_per_night, checkIn, checkOut) : room.price_per_night;
+  const liveCheck =
+    checkIn && checkOut
+      ? validateRoomRequest(req, room, busy)
+      : "Select check-in and check-out dates.";
+  const total =
+    checkIn && checkOut ? roomTotal(room.price_per_night, checkIn, checkOut) : room.price_per_night;
   const dueNow = amountForOption(total, option);
   const balance = balanceDue(total, dueNow);
 
@@ -108,9 +115,19 @@ function BookRoomPage() {
     setError(null);
     setSubmitting(true);
     try {
-      const res = await create({ data: { room_id: room.id, ...req, special_orders: notes, payment_option: option, sandbox_mobile: mobile } });
+      const res = await create({
+        data: {
+          room_id: room.id,
+          ...req,
+          special_orders: notes,
+          payment_option: option,
+          sandbox_mobile: mobile,
+        },
+      });
       if (!res.ok) return setError(res.message);
-      toast.success(`Paid ${formatPeso(res.amountPaid)} through Sandbox (ref ${res.reference}). Reservation for Room ${room.room_number} submitted.`);
+      toast.success(
+        `Paid ${formatPeso(res.amountPaid)} through Sandbox (ref ${res.reference}). Reservation for Room ${room.room_number} submitted.`,
+      );
       navigate({ to: "/my-bookings" });
     } catch {
       setError("Something went wrong. Please try again.");
@@ -129,23 +146,40 @@ function BookRoomPage() {
         title={`Room ${room.room_number}, ${room.type_name}`}
         meta={
           <>
-            <span className="inline-flex items-center gap-1.5"><Users className="size-4" /> Up to {room.capacity} guest{room.capacity > 1 ? "s" : ""}</span>
+            <span className="inline-flex items-center gap-1.5">
+              <Users className="size-4" /> Up to {room.capacity} guest{room.capacity > 1 ? "s" : ""}
+            </span>
             <span>{formatPeso(room.price_per_night)} per night</span>
           </>
         }
       />
 
-      <form onSubmit={submit} className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_360px]">
+      <form
+        onSubmit={submit}
+        className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_360px]"
+      >
         <div className="space-y-8">
           <section className="rounded-2xl border border-border bg-card p-6 shadow-soft">
             <div className="flex items-center gap-2">
               <CalendarDays className="size-5 text-gold" />
               <h2 className="text-lg font-semibold">Stay dates</h2>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">Pick your check-in date, then your check-out date.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Pick your check-in date, then your check-out date.
+            </p>
             <div className="mt-4 flex flex-wrap gap-2">
               {STAY_PRESETS.map((n) => (
-                <button key={n} type="button" onClick={() => applyPreset(n)} className={cn("rounded-full border px-4 py-1.5 text-sm font-medium transition-colors", nights === n ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-muted")}>
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => applyPreset(n)}
+                  className={cn(
+                    "rounded-full border px-4 py-1.5 text-sm font-medium transition-colors",
+                    nights === n
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border hover:bg-muted",
+                  )}
+                >
                   {n} night{n > 1 ? "s" : ""}
                 </button>
               ))}
@@ -161,21 +195,37 @@ function BookRoomPage() {
                   return y < today || blocked.has(y);
                 }}
                 modifiers={{ booked: (d) => blocked.has(dateToYmd(d)) }}
-                modifiersClassNames={{ booked: "[&>button]:bg-danger-soft [&>button]:text-destructive [&>button]:line-through" }}
+                modifiersClassNames={{
+                  booked:
+                    "[&>button]:bg-danger-soft [&>button]:text-destructive [&>button]:line-through",
+                }}
                 className="rounded-xl border border-border [--cell-size:2.5rem]"
               />
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">Crossed-out nights are already reserved.</p>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Crossed-out nights are already reserved.
+            </p>
           </section>
 
           <section className="rounded-2xl border border-border bg-card p-6 shadow-soft">
             <h2 className="text-lg font-semibold">Guests and requests</h2>
             <div className="mt-4 max-w-xs space-y-2">
               <Label htmlFor="guests">Number of guests</Label>
-              <Input id="guests" type="number" min={1} max={room.capacity} value={guests} onChange={(e) => setGuests(Number(e.target.value))} className="h-11" />
+              <Input
+                id="guests"
+                type="number"
+                min={1}
+                max={room.capacity}
+                value={guests}
+                onChange={(e) => setGuests(Number(e.target.value))}
+                className="h-11"
+              />
             </div>
             <div className="mt-6 space-y-2">
-              <Label htmlFor="notes">Special requests <span className="font-normal text-muted-foreground">(optional)</span></Label>
+              <Label htmlFor="notes">
+                Special requests{" "}
+                <span className="font-normal text-muted-foreground">(optional)</span>
+              </Label>
               <div className="flex flex-wrap gap-2">
                 {REQUESTS.map((r) => (
                   <button
@@ -188,19 +238,38 @@ function BookRoomPage() {
                   </button>
                 ))}
               </div>
-              <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} maxLength={1000} placeholder="Bedding preference, arrival time, accessibility needs..." className="mt-2" />
+              <Textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+                maxLength={1000}
+                placeholder="Bedding preference, arrival time, accessibility needs..."
+                className="mt-2"
+              />
             </div>
           </section>
 
           <section className="rounded-2xl border border-border bg-card p-6 shadow-soft">
             <div className="flex items-center gap-2">
-              <Wallet className="size-5 text-gold" />
-              <h2 className="text-lg font-semibold">Payment</h2>
+              <ShieldCheck className="size-5 text-gold" />
+              <h2 className="text-lg font-semibold">50% Downpayment Policy</h2>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">
-              A downpayment of at least 50% of the total bill, paid online through the Sandbox wallet, is required to reserve a room.
-            </p>
-            <div role="radiogroup" aria-label="Payment amount" className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="mt-3 rounded-xl border border-gold/30 bg-gold/5 p-4 text-sm leading-relaxed">
+              <p className="font-semibold text-foreground">
+                Mandatory Reservation Policy: 50% Downpayment Required
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                To guarantee your stay and protect room availability, ISATU requires an initial
+                downpayment of at least 50% before dates are reserved. The remaining 50% balance may
+                be settled online anytime in My Bookings or at the front desk upon check-in.
+              </p>
+            </div>
+            <div
+              role="radiogroup"
+              aria-label="Payment amount"
+              className="mt-5 grid gap-3 sm:grid-cols-2"
+            >
               {PAYMENT_OPTIONS.map((o) => {
                 const active = option === o.value;
                 return (
@@ -212,12 +281,16 @@ function BookRoomPage() {
                     onClick={() => setOption(o.value)}
                     className={cn(
                       "rounded-xl border p-4 text-left transition-colors",
-                      active ? "border-primary bg-secondary ring-1 ring-primary" : "border-border hover:bg-muted",
+                      active
+                        ? "border-primary bg-secondary ring-1 ring-primary"
+                        : "border-border hover:bg-muted",
                     )}
                   >
                     <span className="flex items-center justify-between gap-2">
                       <span className="font-semibold">{o.label}</span>
-                      <span className="font-display font-semibold">{formatPeso(amountForOption(total, o.value))}</span>
+                      <span className="font-display font-semibold">
+                        {formatPeso(amountForOption(total, o.value))}
+                      </span>
                     </span>
                     <span className="mt-1 block text-xs text-muted-foreground">{o.detail}</span>
                   </button>
@@ -225,11 +298,26 @@ function BookRoomPage() {
               })}
             </div>
             <div className="mt-5 rounded-xl border border-border bg-surface p-4">
-              <p className="text-sm font-semibold">Sandbox wallet</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">Test wallet for demonstration. No real money is charged.</p>
+              <div className="flex items-center gap-2">
+                <Wallet className="size-4 text-gold" />
+                <p className="text-sm font-semibold">Sandbox Online Payment Gateway</p>
+              </div>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Official mock digital wallet simulation. Supports test Philippine mobile numbers
+                (e.g. 0917 123 4567).
+              </p>
               <div className="mt-3 max-w-xs space-y-2">
                 <Label htmlFor="sandbox-mobile">Wallet mobile number</Label>
-                <Input id="sandbox-mobile" inputMode="numeric" autoComplete="tel" placeholder="09XX XXX XXXX" value={mobile} onChange={(e) => setMobile(e.target.value)} maxLength={13} className="h-11" />
+                <Input
+                  id="sandbox-mobile"
+                  inputMode="numeric"
+                  autoComplete="tel"
+                  placeholder="0917 123 4567"
+                  value={mobile}
+                  onChange={(e) => setMobile(e.target.value)}
+                  maxLength={13}
+                  className="h-11"
+                />
               </div>
             </div>
           </section>
@@ -239,28 +327,66 @@ function BookRoomPage() {
           <div className="rounded-2xl border border-border bg-card p-6 shadow-lift">
             <h2 className="text-lg font-semibold">Summary</h2>
             <dl className="mt-5 space-y-3 text-sm">
-              <div className="flex justify-between"><dt className="text-muted-foreground">Check-in</dt><dd className="font-medium">{checkIn ? formatDate(checkIn) : "-"}</dd></div>
-              <div className="flex justify-between"><dt className="text-muted-foreground">Check-out</dt><dd className="font-medium">{checkOut ? formatDate(checkOut) : "-"}</dd></div>
-              <div className="flex justify-between"><dt className="text-muted-foreground">Nights</dt><dd className="font-medium">{nights || "-"}</dd></div>
-              <div className="flex justify-between"><dt className="text-muted-foreground">Guests</dt><dd className="font-medium">{guests}</dd></div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Check-in</dt>
+                <dd className="font-medium">{checkIn ? formatDate(checkIn) : "-"}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Check-out</dt>
+                <dd className="font-medium">{checkOut ? formatDate(checkOut) : "-"}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Nights</dt>
+                <dd className="font-medium">{nights || "-"}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Guests</dt>
+                <dd className="font-medium">{guests}</dd>
+              </div>
             </dl>
             <dl className="mt-5 space-y-3 border-t border-border pt-5 text-sm">
-              <div className="flex justify-between"><dt className="text-muted-foreground">Total bill</dt><dd className="font-medium">{formatPeso(total)}</dd></div>
-              <div className="flex justify-between"><dt className="text-muted-foreground">Balance after payment</dt><dd className="font-medium">{formatPeso(balance)}</dd></div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Total bill</dt>
+                <dd className="font-medium">{formatPeso(total)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Remaining balance</dt>
+                <dd className="font-medium">{formatPeso(balance)}</dd>
+              </div>
             </dl>
             <div className="mt-4 flex items-end justify-between border-t border-border pt-4">
-              <span className="text-sm text-muted-foreground">Due now</span>
+              <span className="text-sm text-muted-foreground">Required downpayment</span>
               <span className="font-display text-2xl font-semibold">{formatPeso(dueNow)}</span>
             </div>
-            <p className={cn("mt-4 flex items-start gap-2 text-xs", liveCheck ? "text-warning" : "text-success")}>
+            <p
+              className={cn(
+                "mt-4 flex items-start gap-2 text-xs",
+                liveCheck ? "text-warning" : "text-success",
+              )}
+            >
               <Info className="mt-0.5 size-3.5 shrink-0" />
-              {liveCheck ?? "This room is available for your stay."}
+              {liveCheck ?? "Dates available. 50% downpayment required to book."}
             </p>
-            {error && <div className="mt-4"><FormMessage tone="error">{error}</FormMessage></div>}
-            <Button type="submit" variant="gold" size="lg" className="mt-6 w-full" disabled={submitting}>
-              {submitting ? <Loader2 className="animate-spin" /> : <ShieldCheck />} Pay {formatPeso(dueNow)} and reserve
+            {error && (
+              <div className="mt-4">
+                <FormMessage tone="error">{error}</FormMessage>
+              </div>
+            )}
+            <Button
+              type="submit"
+              variant="gold"
+              size="lg"
+              className="mt-6 w-full"
+              disabled={submitting}
+            >
+              {submitting ? <Loader2 className="animate-spin" /> : <ShieldCheck />}
+              {option === "downpayment"
+                ? `Pay 50% Downpayment (${formatPeso(dueNow)})`
+                : `Pay Full (${formatPeso(dueNow)})`}
             </Button>
-            <p className="mt-3 text-center text-xs text-muted-foreground">Cancelled or rejected reservations are refunded to your Sandbox wallet.</p>
+            <p className="mt-3 text-center text-xs text-muted-foreground">
+              Instant reservation upon 50% downpayment verification via Sandbox.
+            </p>
           </div>
         </aside>
       </form>

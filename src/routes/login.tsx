@@ -17,7 +17,10 @@ export const Route = createFileRoute("/login")({
       { title: "Sign in | ISATU Booking" },
       { name: "description", content: "Sign in to manage your ISATU venue and room reservations." },
       { property: "og:title", content: "Sign in | ISATU Booking" },
-      { property: "og:description", content: "Access your reservations or the facility administration portal." },
+      {
+        property: "og:description",
+        content: "Access your reservations or the facility administration portal.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -65,7 +68,10 @@ function LoginPage() {
       );
       return;
     }
-    const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", data.user.id);
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user.id);
     const staff = (roles ?? []).some((r) => r.role === "admin" || r.role === "venue_admin");
     const target = safeRedirect(redirect);
     if (target) window.location.assign(target);
@@ -73,7 +79,10 @@ function LoginPage() {
   };
 
   return (
-    <AuthShell title="Welcome back" subtitle="Sign in to book venues and rooms or manage your facility.">
+    <AuthShell
+      title="Welcome back"
+      subtitle="Sign in to book venues and rooms or manage your facility."
+    >
       <form onSubmit={submit} className="space-y-5">
         {error && <FormMessage tone="error">{error}</FormMessage>}
         <div className="space-y-2">
@@ -85,12 +94,17 @@ function LoginPage() {
             onChange={(e) => setIdentifier(e.target.value)}
             className="h-11"
           />
-          <p className="text-xs text-muted-foreground">Guests use their email. Staff use their assigned username.</p>
+          <p className="text-xs text-muted-foreground">
+            Guests use their email. Staff use their assigned username.
+          </p>
         </div>
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="password">Password</Label>
-            <Link to="/forgot-password" className="text-xs font-medium text-muted-foreground hover:text-foreground">
+            <Link
+              to="/forgot-password"
+              className="text-xs font-medium text-muted-foreground hover:text-foreground"
+            >
               Forgot password?
             </Link>
           </div>

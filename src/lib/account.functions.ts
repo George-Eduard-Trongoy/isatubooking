@@ -24,7 +24,10 @@ export const getMe = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const [{ data: profile }, { data: roles }] = await Promise.all([
       supabase.from("profiles").select("username, full_name, email").eq("id", userId).maybeSingle(),
-      supabase.from("user_roles").select("role, facility_id, facilities(code)").eq("user_id", userId),
+      supabase
+        .from("user_roles")
+        .select("role, facility_id, facilities(code)")
+        .eq("user_id", userId),
     ]);
     const best = (roles ?? []).slice().sort((a, b) => ROLE_RANK[b.role] - ROLE_RANK[a.role])[0];
 
@@ -60,8 +63,20 @@ async function claimLegacyRecords(userId: string, email: string) {
   if (authUser.user.email?.toLowerCase() !== email.toLowerCase()) return;
 
   for (const l of legacy) {
-    await supabaseAdmin.from("legacy_users").update({ claimed_by: userId }).eq("id", l.id).is("claimed_by", null);
-    await supabaseAdmin.from("venue_bookings").update({ user_id: userId }).eq("legacy_user_id", l.id).is("user_id", null);
-    await supabaseAdmin.from("room_bookings").update({ user_id: userId }).eq("legacy_user_id", l.id).is("user_id", null);
+    await supabaseAdmin
+      .from("legacy_users")
+      .update({ claimed_by: userId })
+      .eq("id", l.id)
+      .is("claimed_by", null);
+    await supabaseAdmin
+      .from("venue_bookings")
+      .update({ user_id: userId })
+      .eq("legacy_user_id", l.id)
+      .is("user_id", null);
+    await supabaseAdmin
+      .from("room_bookings")
+      .update({ user_id: userId })
+      .eq("legacy_user_id", l.id)
+      .is("user_id", null);
   }
 }

@@ -19,7 +19,10 @@ export function BookingHero({
 }) {
   return (
     <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-6">
-      <Link to={backTo} className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+      <Link
+        to={backTo}
+        className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+      >
         <ArrowLeft className="size-4" /> {backLabel}
       </Link>
       <div className="relative mt-5 isolate overflow-hidden rounded-3xl">
@@ -28,7 +31,9 @@ export function BookingHero({
         <div className="px-6 pb-8 pt-32 md:px-10 md:pt-44">
           <p className="eyebrow text-gold">{eyebrow}</p>
           <h1 className="mt-3 text-3xl font-semibold text-ink-foreground md:text-5xl">{title}</h1>
-          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-foreground/80">{meta}</div>
+          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-foreground/80">
+            {meta}
+          </div>
         </div>
       </div>
     </div>
@@ -56,7 +61,9 @@ export function StepIndicator({ step }: { step: 1 | 2 | 3 }) {
             >
               {n}
             </span>
-            <span className={active ? "font-semibold text-foreground" : "text-muted-foreground"}>{s}</span>
+            <span className={active ? "font-semibold text-foreground" : "text-muted-foreground"}>
+              {s}
+            </span>
             {n < steps.length && <span className="h-px w-8 bg-border" />}
           </li>
         );

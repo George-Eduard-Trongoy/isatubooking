@@ -5,7 +5,10 @@ export type Ctx = { supabase: any; userId: string };
 export type StaffScope = { role: AppRole; facilityId: number | null };
 
 export async function staffScope(ctx: Ctx): Promise<StaffScope | null> {
-  const { data } = await ctx.supabase.from("user_roles").select("role, facility_id").eq("user_id", ctx.userId);
+  const { data } = await ctx.supabase
+    .from("user_roles")
+    .select("role, facility_id")
+    .eq("user_id", ctx.userId);
   const rows = (data ?? []) as { role: AppRole; facility_id: number | null }[];
   if (rows.some((r) => r.role === "admin")) return { role: "admin", facilityId: null };
   const va = rows.find((r) => r.role === "venue_admin");
@@ -19,7 +22,10 @@ export async function requireStaff(ctx: Ctx): Promise<StaffScope> {
   return scope;
 }
 
-export function scopeIncludes(scope: StaffScope | null, facilityId: number | null | undefined): boolean {
+export function scopeIncludes(
+  scope: StaffScope | null,
+  facilityId: number | null | undefined,
+): boolean {
   if (!scope) return false;
   return scope.role === "admin" || (facilityId != null && facilityId === scope.facilityId);
 }
