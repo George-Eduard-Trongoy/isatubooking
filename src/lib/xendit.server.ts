@@ -36,6 +36,7 @@ async function request(path: string, body?: object, method?: "GET" | "POST"): Pr
     method: method ?? (body ? "POST" : "GET"),
     headers: {
       Authorization: `Basic ${Buffer.from(`${secret()}:`).toString("base64")}`,
+      ...(path.startsWith("/v3/") ? { "api-version": "2024-11-11" } : {}),
       ...(body ? { "Content-Type": "application/json" } : {}),
     },
     signal: AbortSignal.timeout(15000),
