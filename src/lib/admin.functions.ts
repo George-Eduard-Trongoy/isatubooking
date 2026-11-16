@@ -20,7 +20,7 @@ async function requireSuperAdmin(ctx: Ctx) {
   return scope;
 }
 
-import { localRoomBookings, localVenueBookings } from "./bookings.functions";
+import { localVenueBookings } from "./bookings.functions";
 
 export const getAdminDashboard = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -70,6 +70,16 @@ export const getAdminDashboard = createServerFn({ method: "POST" })
 
     const venueBookings = (vb.data ?? []).filter((b: any) => inScope(b.venues?.facility_id));
     const roomBookings = (rb.data ?? []).filter((b: any) => inScope(b.rooms?.facility_id));
+    const { listPaymentsForBookings } = await import("./xendit-data.server");
+    const transactions = await listPaymentsForBookings(
+      roomBookings.map((booking: any) => booking.id as number),
+    );
+    const latestTransactionByBooking = new Map<number, (typeof transactions)[number]>();
+    for (const transaction of transactions) {
+      if (!latestTransactionByBooking.has(transaction.room_booking_id)) {
+        latestTransactionByBooking.set(transaction.room_booking_id, transaction);
+      }
+    }
 
     const userIds = [
       ...new Set([...venueBookings, ...roomBookings].map((b: any) => b.user_id).filter(Boolean)),
@@ -134,27 +144,9 @@ export const getAdminDashboard = createServerFn({ method: "POST" })
       })),
     ];
 
-    const remoteRoomIds = new Set(roomBookings.map((b: any) => b.id));
-    const mergedRoomBookings = [
-      ...localRoomBookings
-        .filter((b) => !remoteRoomIds.has(b.id) && inScope(b.facility_id))
-        .map((b) => ({
-          id: b.id,
-          client: { name: "Guest Client", contact: b.user_id },
-          check_in: b.check_in,
-          check_out: b.check_out,
-          guests: b.guests,
-          special_orders: b.special_orders,
-          status: b.status,
-          room_number: b.room_number,
-          room_type: b.room_type,
-          payment_method: b.payment_method,
-          payment_status: b.payment_status,
-          amount_due: b.amount_due,
-          amount_paid: b.amount_paid,
-          payment_reference: b.payment_reference,
-        })),
-      ...roomBookings.map((b: any) => ({
+    const mergedRoomBookings = roomBookings.map((b: any) => {
+      const payment = latestTransactionByBooking.get(b.id);
+      return {
         id: b.id as number,
         client: client(b),
         check_in: b.check_in as string,
@@ -172,8 +164,17 @@ export const getAdminDashboard = createServerFn({ method: "POST" })
             : roomTotal(Number(b.rooms?.price_per_night ?? 0), b.check_in, b.check_out),
         amount_paid: Number(b.amount_paid ?? 0),
         payment_reference: (b.payment_reference ?? null) as string | null,
-      })),
-    ];
+        latest_payment: payment
+          ? {
+              reference_id: payment.reference_id,
+              purpose: payment.purpose,
+              amount: payment.amount,
+              status: payment.status,
+              failure_code: payment.failure_code,
+            }
+          : null,
+      };
+    });
 
     return {
       scope,
@@ -247,13 +248,36 @@ export const updateBookingStatus = createServerFn({ method: "POST" })
       .select("id");
     if (error || !rows?.length)
       return { ok: false, message: "This booking is managed by another administrator." };
-    // Sandbox payments are refunded when a room booking is closed.
     if (data.type === "room" && (data.status === "rejected" || data.status === "cancelled")) {
-      await context.supabase
-        .from("room_bookings")
-        .update({ payment_status: "refunded" })
-        .eq("id", data.id)
-        .in("payment_status", ["paid", "partial"]);
+      const { findPendingPayment, updatePaymentTransaction } = await import("./xendit-data.server");
+      const activePayment = await findPendingPayment(data.id);
+      if (activePayment) {
+        const { error: paymentError } = await updatePaymentTransaction(activePayment.id, {
+          status: "cancelled",
+        });
+        if (paymentError) {
+          console.error(
+            "Room booking was closed, but its payment session was not updated.",
+            paymentError,
+          );
+          return {
+            ok: false,
+            message: "The booking was closed, but its active payment session could not be closed.",
+          };
+        }
+        if (activePayment.payment_session_id) {
+          try {
+            const { cancelCheckout } = await import("./xendit.server");
+            await cancelCheckout(activePayment.payment_session_id);
+          } catch (cancelError) {
+            console.error("Could not cancel the Xendit session for this booking.", cancelError);
+            return {
+              ok: false,
+              message: "The booking was closed, but Xendit could not close its checkout session.",
+            };
+          }
+        }
+      }
     }
     return { ok: true };
   });

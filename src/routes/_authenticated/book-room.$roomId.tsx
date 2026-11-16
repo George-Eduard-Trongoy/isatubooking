@@ -1,4 +1,4 @@
-import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, notFound } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
@@ -26,7 +26,6 @@ import {
   roomTotal,
   todayYMD,
   validateRoomRequest,
-  validateSandboxAccount,
   type PaymentOption,
 } from "@/lib/booking-rules";
 import { dateToYmd, ymdToDate } from "@/lib/date-utils";
@@ -77,7 +76,6 @@ function BookRoomPage() {
   const { data } = useSuspenseQuery(roomQuery(Number(roomId)));
   const room = data.room!;
   const busy = data.availability.busy;
-  const navigate = useNavigate();
   const create = useServerFn(createRoomBooking);
 
   const today = todayYMD();
@@ -85,7 +83,6 @@ function BookRoomPage() {
   const [guests, setGuests] = useState(1);
   const [notes, setNotes] = useState("");
   const [option, setOption] = useState<PaymentOption>("downpayment");
-  const [mobile, setMobile] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -110,7 +107,7 @@ function BookRoomPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const err = validateRoomRequest(req, room, busy) ?? validateSandboxAccount(mobile);
+    const err = validateRoomRequest(req, room, busy);
     if (err) return setError(err);
     setError(null);
     setSubmitting(true);
@@ -121,14 +118,11 @@ function BookRoomPage() {
           ...req,
           special_orders: notes,
           payment_option: option,
-          sandbox_mobile: mobile,
         },
       });
       if (!res.ok) return setError(res.message);
-      toast.success(
-        `Paid ${formatPeso(res.amountPaid)} through Sandbox (ref ${res.reference}). Reservation for Room ${room.room_number} submitted.`,
-      );
-      navigate({ to: "/my-bookings" });
+      toast.success("Continue to Xendit to complete your room payment.");
+      window.location.assign(res.checkoutUrl);
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -300,25 +294,12 @@ function BookRoomPage() {
             <div className="mt-5 rounded-xl border border-border bg-surface p-4">
               <div className="flex items-center gap-2">
                 <Wallet className="size-4 text-gold" />
-                <p className="text-sm font-semibold">Sandbox Online Payment Gateway</p>
+                <p className="text-sm font-semibold">Xendit hosted checkout · Test Mode</p>
               </div>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Official mock digital wallet simulation. Supports test Philippine mobile numbers
-                (e.g. 0917 123 4567).
+                You will complete your payment on Xendit. The booking payment status changes only
+                after Xendit confirms it to our server.
               </p>
-              <div className="mt-3 max-w-xs space-y-2">
-                <Label htmlFor="sandbox-mobile">Wallet mobile number</Label>
-                <Input
-                  id="sandbox-mobile"
-                  inputMode="numeric"
-                  autoComplete="tel"
-                  placeholder="0917 123 4567"
-                  value={mobile}
-                  onChange={(e) => setMobile(e.target.value)}
-                  maxLength={13}
-                  className="h-11"
-                />
-              </div>
             </div>
           </section>
         </div>
@@ -385,7 +366,7 @@ function BookRoomPage() {
                 : `Pay Full (${formatPeso(dueNow)})`}
             </Button>
             <p className="mt-3 text-center text-xs text-muted-foreground">
-              Instant reservation upon 50% downpayment verification via Sandbox.
+              Dates are held during checkout. Payment is recorded after provider verification.
             </p>
           </div>
         </aside>

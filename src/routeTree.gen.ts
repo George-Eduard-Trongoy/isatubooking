@@ -24,6 +24,7 @@ import { Route as AuthenticatedBookRoomRoomIdRouteImport } from './routes/_authe
 import { Route as AuthenticatedBookVenueVenueIdRouteImport } from './routes/_authenticated/book-venue.$venueId'
 import { Route as AuthenticatedDocumentsBookingIdRouteImport } from './routes/_authenticated/documents.$bookingId'
 import { Route as AuthenticatedFloorPlanBookingIdRouteImport } from './routes/_authenticated/floor-plan.$bookingId'
+import { Route as ApiXenditWebhookRouteImport } from './routes/api/xendit/webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -103,6 +104,11 @@ const AuthenticatedFloorPlanBookingIdRoute =
     path: '/floor-plan/$bookingId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiXenditWebhookRoute = ApiXenditWebhookRouteImport.update({
+  id: '/api/xendit/webhook',
+  path: '/api/xendit/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -119,6 +125,7 @@ export interface FileRoutesByFullPath {
   '/book-venue/$venueId': typeof AuthenticatedBookVenueVenueIdRoute
   '/documents/$bookingId': typeof AuthenticatedDocumentsBookingIdRoute
   '/floor-plan/$bookingId': typeof AuthenticatedFloorPlanBookingIdRoute
+  '/api/xendit/webhook': typeof ApiXenditWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -135,6 +142,7 @@ export interface FileRoutesByTo {
   '/book-venue/$venueId': typeof AuthenticatedBookVenueVenueIdRoute
   '/documents/$bookingId': typeof AuthenticatedDocumentsBookingIdRoute
   '/floor-plan/$bookingId': typeof AuthenticatedFloorPlanBookingIdRoute
+  '/api/xendit/webhook': typeof ApiXenditWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -153,6 +161,7 @@ export interface FileRoutesById {
   '/_authenticated/book-venue/$venueId': typeof AuthenticatedBookVenueVenueIdRoute
   '/_authenticated/documents/$bookingId': typeof AuthenticatedDocumentsBookingIdRoute
   '/_authenticated/floor-plan/$bookingId': typeof AuthenticatedFloorPlanBookingIdRoute
+  '/api/xendit/webhook': typeof ApiXenditWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -171,6 +180,7 @@ export interface FileRouteTypes {
     | '/book-venue/$venueId'
     | '/documents/$bookingId'
     | '/floor-plan/$bookingId'
+    | '/api/xendit/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -187,6 +197,7 @@ export interface FileRouteTypes {
     | '/book-venue/$venueId'
     | '/documents/$bookingId'
     | '/floor-plan/$bookingId'
+    | '/api/xendit/webhook'
   id:
     | '__root__'
     | '/'
@@ -204,6 +215,7 @@ export interface FileRouteTypes {
     | '/_authenticated/book-venue/$venueId'
     | '/_authenticated/documents/$bookingId'
     | '/_authenticated/floor-plan/$bookingId'
+    | '/api/xendit/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -215,6 +227,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   RoomsRoute: typeof RoomsRoute
   VenuesRoute: typeof VenuesRoute
+  ApiXenditWebhookRoute: typeof ApiXenditWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -324,6 +337,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFloorPlanBookingIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/xendit/webhook': {
+      id: '/api/xendit/webhook'
+      path: '/api/xendit/webhook'
+      fullPath: '/api/xendit/webhook'
+      preLoaderRoute: typeof ApiXenditWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -359,6 +379,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   RoomsRoute: RoomsRoute,
   VenuesRoute: VenuesRoute,
+  ApiXenditWebhookRoute: ApiXenditWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

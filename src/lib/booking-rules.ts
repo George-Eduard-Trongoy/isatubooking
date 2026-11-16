@@ -221,7 +221,7 @@ export function venueBlockedDates(
 export const PAYMENT_STATUSES = ["unpaid", "partial", "paid", "refunded"] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
-/** Share of the room bill that must be paid online (Sandbox) to place a reservation. */
+/** Share of the room bill that must be paid online to place a reservation. */
 export const DOWNPAYMENT_RATE = 0.5;
 
 export const PAYMENT_OPTIONS = [
@@ -279,19 +279,6 @@ export function canPayOnline(b: { status: string; payment_status: string }): boo
     (b.status === "pending" || b.status === "approved") &&
     (b.payment_status === "unpaid" || b.payment_status === "partial")
   );
-}
-
-/** Sandbox wallet accounts use a Philippine mobile number: 11 digits starting with 09. */
-export function validateSandboxAccount(mobile: string): string | null {
-  const digits = mobile.replace(/[\s-]/g, "");
-  return /^09\d{9}$/.test(digits)
-    ? null
-    : "Enter the 11-digit mobile number of your Sandbox wallet, starting with 09.";
-}
-
-/** Payment status after a booking is cancelled or rejected: any amount paid is refunded. */
-export function paymentStatusAfterClosing(paymentStatus: string): string {
-  return paymentStatus === "paid" || paymentStatus === "partial" ? "refunded" : paymentStatus;
 }
 
 // ---------- Venue documents ----------

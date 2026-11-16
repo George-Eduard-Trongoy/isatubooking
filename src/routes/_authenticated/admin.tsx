@@ -426,8 +426,24 @@ function BookingsPanel({ d }: { d: Dashboard }) {
                         <p className="mt-1.5 text-xs">
                           {formatPeso(b.amount_paid)} of {formatPeso(b.amount_due)}
                         </p>
+                        <p className="text-xs text-muted-foreground">
+                          {b.payment_method === "xendit"
+                            ? "Xendit hosted checkout"
+                            : b.payment_method.replace(/_/g, " ")}
+                        </p>
                         {b.payment_reference && (
                           <p className="text-xs text-muted-foreground">{b.payment_reference}</p>
+                        )}
+                        {b.latest_payment && (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Latest checkout: {b.latest_payment.status} (
+                            {formatPeso(b.latest_payment.amount)}, {b.latest_payment.purpose})
+                          </p>
+                        )}
+                        {b.latest_payment?.failure_code && (
+                          <p className="text-xs text-destructive">
+                            Failed attempt: {b.latest_payment.failure_code}
+                          </p>
                         )}
                       </td>
                       <td className={td}>
