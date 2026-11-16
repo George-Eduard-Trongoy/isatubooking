@@ -52,6 +52,12 @@ async function handleWebhook(request: Request): Promise<Response> {
       recordPaymentFailure,
     } = await import("@/lib/xendit-data.server");
     const { event, data } = payload;
+    // Dashboard samples and unrelated merchant events must not mutate bookings.
+    // Only acknowledge unknown non-booking references after token authentication.
+    if (data.reference_id && !data.reference_id.startsWith("room-")) {
+      const known = await findPaymentByReference(data.reference_id);
+      if (!known) return jsonResponse(200, { received: true, ignored: true });
+    }
     if (
       event === "payment_session.completed" ||
       event === "payment.capture" ||
