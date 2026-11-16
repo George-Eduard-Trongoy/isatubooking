@@ -5,41 +5,17 @@ import {
   amountForOption,
   balanceDue,
   canPayOnline,
-  paymentStatusAfterClosing,
-  paymentStatusFor,
   roomTotal,
   summarizeDocuments,
   validateRoomRequest,
   validateReservationPayment,
-  validateSandboxAccount,
   validateVenueRequest,
   type DocumentSummary,
 } from "./booking-rules";
 import { generateRecommendedLayout, normalizePlan, type FloorPlan } from "./floor-plan";
+import type { PaymentPurpose, PaymentTransaction } from "./xendit-data.server";
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; message: string };
-
-export type LocalRoomBooking = {
-  id: number;
-  user_id: string;
-  room_id: number;
-  check_in: string;
-  check_out: string;
-  guests: number;
-  special_orders: string;
-  status: string;
-  payment_method: string;
-  payment_status: string;
-  amount_due: number;
-  amount_paid: number;
-  payment_reference: string | null;
-  paid_at: string | null;
-  created_at: string;
-  room_number?: string;
-  room_type?: string;
-  facility_name?: string;
-  price_per_night?: number;
-};
 
 export type LocalVenueBooking = {
   id: number;
@@ -59,7 +35,6 @@ export type LocalVenueBooking = {
   facility_name?: string;
 };
 
-export const localRoomBookings: LocalRoomBooking[] = [];
 export const localVenueBookings: LocalVenueBooking[] = [];
 
 const venueInput = z.object({
@@ -170,7 +145,6 @@ const roomInput = z.object({
   guests: z.number().int(),
   special_orders: z.string().max(1000).default(""),
   payment_option: z.enum(["downpayment", "full"]),
-  sandbox_mobile: z.string().max(20),
 });
 
 export const createRoomBooking = createServerFn({ method: "POST" })
@@ -181,7 +155,7 @@ export const createRoomBooking = createServerFn({ method: "POST" })
       data,
       context,
     }): Promise<
-      Result<{ bookingId: number; reference: string; amountPaid: number; balance: number }>
+      Result<{ bookingId: number; reference: string; checkoutUrl: string; amount: number }>
     > => {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: room } = await supabaseAdmin
@@ -196,74 +170,102 @@ export const createRoomBooking = createServerFn({ method: "POST" })
       const err = validateRoomRequest(data, room, busy ?? []);
       if (err) return { ok: false, message: err };
 
-      // Policy: A reservation requires a Sandbox downpayment of at least 50% of the bill.
-      const accountError = validateSandboxAccount(data.sandbox_mobile);
-      if (accountError) return { ok: false, message: accountError };
       const total = roomTotal(Number(room.price_per_night), data.check_in, data.check_out);
       const amount = amountForOption(total, data.payment_option);
       const paymentError = validateReservationPayment(total, amount);
       if (paymentError) return { ok: false, message: paymentError };
 
-      const reference = sandboxReference();
-      let bookingId = 0;
-      try {
-        const { data: row } = await supabaseAdmin
-          .from("room_bookings")
-          .insert({
-            user_id: context.userId,
-            room_id: room.id,
-            check_in: data.check_in,
-            check_out: data.check_out,
-            guests: data.guests,
-            special_orders: data.special_orders.trim(),
-            status: "pending",
-            payment_method: "sandbox",
-            payment_status: paymentStatusFor(total, amount),
-            amount_due: total,
-            amount_paid: amount,
-            payment_reference: reference,
-            paid_at: new Date().toISOString(),
-          })
-          .select("id")
-          .single();
-        if (row?.id) bookingId = row.id;
-      } catch {
-        // Fallback to local store
+      const { createPaymentTransaction, updatePaymentTransaction } =
+        await import("./xendit-data.server");
+      const { createCheckout } = await import("./xendit.server");
+      const { data: booking, error: bookingError } = await supabaseAdmin
+        .from("room_bookings")
+        .insert({
+          user_id: context.userId,
+          room_id: room.id,
+          check_in: data.check_in,
+          check_out: data.check_out,
+          guests: data.guests,
+          special_orders: data.special_orders.trim(),
+          status: "pending",
+          payment_method: "xendit",
+          payment_status: "unpaid",
+          amount_due: total,
+          amount_paid: 0,
+        })
+        .select("id")
+        .single();
+      if (bookingError || !booking) {
+        return {
+          ok: false,
+          message:
+            bookingError?.code === "23P01"
+              ? "This room was just reserved for those dates. Please choose another stay."
+              : "Could not reserve this room. Please try again.",
+        };
       }
 
-      if (!bookingId) {
-        bookingId = 1000 + localRoomBookings.length + 1;
-      }
-
-      localRoomBookings.push({
-        id: bookingId,
+      const reference = `room-${booking.id}-${crypto.randomUUID()}`;
+      const purpose: PaymentPurpose = data.payment_option;
+      const { data: transaction, error: transactionError } = await createPaymentTransaction({
+        room_booking_id: booking.id,
         user_id: context.userId,
-        room_id: room.id,
-        check_in: data.check_in,
-        check_out: data.check_out,
-        guests: data.guests,
-        special_orders: data.special_orders.trim(),
+        reference_id: reference,
+        purpose,
+        amount,
+        currency: "PHP",
         status: "pending",
-        payment_method: "sandbox",
-        payment_status: paymentStatusFor(total, amount),
-        amount_due: total,
-        amount_paid: amount,
-        payment_reference: reference,
-        paid_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        room_number: (room as any).room_number ?? "101",
-        room_type: (room as any).room_types?.name ?? "Standard",
-        facility_name: (room as any).facilities?.name ?? "ISATU",
-        price_per_night: Number((room as any).price_per_night ?? 0),
       });
+      if (transactionError || !transaction) {
+        const { error: cancelError } = await supabaseAdmin
+          .from("room_bookings")
+          .update({ status: "cancelled" })
+          .eq("id", booking.id);
+        if (cancelError)
+          console.error("Could not release room after payment setup failed.", cancelError);
+        return { ok: false, message: "Could not start the payment. Please try again." };
+      }
 
-      return {
-        ok: true,
-        bookingId,
-        reference,
-        amountPaid: amount,
-        balance: balanceDue(total, amount),
-      };
+      let sessionId: string | null = null;
+      try {
+        const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+        const session = await createCheckout(reference, amount, expiresAt);
+        sessionId = session.payment_session_id;
+        const { error: updateError } = await updatePaymentTransaction(transaction.id, {
+          payment_session_id: session.payment_session_id,
+          payment_link_url: session.payment_link_url ?? null,
+          expires_at: session.expires_at ?? expiresAt,
+        });
+        if (updateError) throw new Error("Could not save the Xendit checkout session.");
+        return {
+          ok: true,
+          bookingId: booking.id,
+          reference,
+          checkoutUrl: session.payment_link_url!,
+          amount,
+        };
+      } catch (error) {
+        const { error: txError } = await updatePaymentTransaction(transaction.id, {
+          status: "failed",
+        });
+        const { error: bookingUpdateError } = await supabaseAdmin
+          .from("room_bookings")
+          .update({ status: "cancelled" })
+          .eq("id", booking.id);
+        if (txError) console.error("Could not mark failed Xendit setup.", txError);
+        if (bookingUpdateError)
+          console.error("Could not release room after Xendit setup failed.", bookingUpdateError);
+        if (sessionId) {
+          try {
+            const { cancelCheckout } = await import("./xendit.server");
+            await cancelCheckout(sessionId);
+          } catch (cancelError) {
+            console.error("Could not cancel the orphaned Xendit checkout.", cancelError);
+          }
+        }
+        console.error("Could not create Xendit checkout.", error);
+        return { ok: false, message: "Could not start Xendit checkout. Please try again." };
+      }
     },
   );
 
@@ -307,6 +309,10 @@ export type MyRoomBooking = {
   amount_due: number;
   amount_paid: number;
   payment_reference: string | null;
+  latest_payment: Pick<
+    PaymentTransaction,
+    "reference_id" | "purpose" | "status" | "payment_link_url" | "expires_at" | "failure_code"
+  > | null;
 };
 
 export const getMyBookings = createServerFn({ method: "POST" })
@@ -377,9 +383,7 @@ export const getMyBookings = createServerFn({ method: "POST" })
       }
     }
 
-    const remoteRoomIds = new Set<number>();
     const room: MyRoomBooking[] = (r.data ?? []).map((b: any) => {
-      remoteRoomIds.add(b.id);
       return {
         id: b.id,
         check_in: b.check_in,
@@ -400,31 +404,30 @@ export const getMyBookings = createServerFn({ method: "POST" })
             : roomTotal(Number(b.rooms?.price_per_night ?? 0), b.check_in, b.check_out),
         amount_paid: Number(b.amount_paid ?? 0),
         payment_reference: b.payment_reference ?? null,
+        latest_payment: null,
       };
     });
 
-    // Merge in any local room bookings for this user
-    for (const b of localRoomBookings) {
-      if (b.user_id === userId && !remoteRoomIds.has(b.id)) {
-        room.unshift({
-          id: b.id,
-          check_in: b.check_in,
-          check_out: b.check_out,
-          guests: b.guests,
-          special_orders: b.special_orders,
-          status: b.status,
-          room_number: b.room_number,
-          room_type: b.room_type,
-          facility_name: b.facility_name,
-          price_per_night: b.price_per_night,
-          created_at: b.created_at,
-          payment_method: b.payment_method,
-          payment_status: b.payment_status,
-          amount_due: b.amount_due,
-          amount_paid: b.amount_paid,
-          payment_reference: b.payment_reference,
-        });
+    const { listPaymentsForBookings } = await import("./xendit-data.server");
+    const payments = await listPaymentsForBookings(room.map((booking) => booking.id));
+    const latestByBooking = new Map<number, PaymentTransaction>();
+    for (const payment of payments) {
+      if (!latestByBooking.has(payment.room_booking_id)) {
+        latestByBooking.set(payment.room_booking_id, payment);
       }
+    }
+    for (const booking of room) {
+      const payment = latestByBooking.get(booking.id);
+      booking.latest_payment = payment
+        ? {
+            reference_id: payment.reference_id,
+            purpose: payment.purpose,
+            status: payment.status,
+            payment_link_url: payment.payment_link_url,
+            expires_at: payment.expires_at,
+            failure_code: payment.failure_code,
+          }
+        : null;
     }
 
     return { venue, room };
@@ -438,7 +441,6 @@ export const cancelBooking = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<Result> => {
     const localVenue =
       data.type === "venue" ? localVenueBookings.find((x) => x.id === data.id) : null;
-    const localRoom = data.type === "room" ? localRoomBookings.find((x) => x.id === data.id) : null;
     if (
       localVenue &&
       (localVenue.user_id === context.userId ||
@@ -448,18 +450,6 @@ export const cancelBooking = createServerFn({ method: "POST" })
       if (localVenue.status === "cancelled")
         return { ok: false, message: "This booking is already cancelled." };
       localVenue.status = "cancelled";
-      return { ok: true };
-    }
-    if (
-      localRoom &&
-      (localRoom.user_id === context.userId ||
-        context.role === "admin" ||
-        context.role === "venue_admin")
-    ) {
-      if (localRoom.status === "cancelled")
-        return { ok: false, message: "This booking is already cancelled." };
-      localRoom.status = "cancelled";
-      localRoom.payment_status = paymentStatusAfterClosing(localRoom.payment_status);
       return { ok: true };
     }
 
@@ -475,23 +465,47 @@ export const cancelBooking = createServerFn({ method: "POST" })
       return { ok: false, message: "This booking is already cancelled." };
     if (b.status === "rejected")
       return { ok: false, message: "Rejected bookings cannot be cancelled." };
+    const { findPendingPayment, updatePaymentTransaction } = await import("./xendit-data.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const patch: { status: string; payment_status?: string } = { status: "cancelled" };
-    if (data.type === "room")
-      patch.payment_status = paymentStatusAfterClosing(
-        String((b as any).payment_status ?? "unpaid"),
-      );
-    const { error } = await supabaseAdmin
-      .from(table)
-      .update(patch as any)
-      .eq("id", data.id);
-    if (error) {
-      if (localVenue) localVenue.status = "cancelled";
-      if (localRoom) {
-        localRoom.status = "cancelled";
-        localRoom.payment_status = paymentStatusAfterClosing(localRoom.payment_status);
+    const update =
+      data.type === "venue"
+        ? supabaseAdmin.from("venue_bookings").update({ status: "cancelled" })
+        : supabaseAdmin.from("room_bookings").update({ status: "cancelled" });
+    const { data: updated, error } = await update
+      .eq("id", data.id)
+      .eq("user_id", context.userId)
+      .select("id");
+    if (error || !updated?.length) return { ok: false, message: "Could not cancel this booking." };
+    if (data.type === "room") {
+      const activePayment = await findPendingPayment(data.id);
+      if (activePayment) {
+        const { error: paymentError } = await updatePaymentTransaction(activePayment.id, {
+          status: "cancelled",
+        });
+        if (paymentError) {
+          console.error(
+            "Room booking was cancelled, but its payment session was not updated.",
+            paymentError,
+          );
+          return {
+            ok: false,
+            message: "The booking was cancelled, but its payment session could not be closed.",
+          };
+        }
+        if (activePayment.payment_session_id) {
+          try {
+            const { cancelCheckout } = await import("./xendit.server");
+            await cancelCheckout(activePayment.payment_session_id);
+          } catch (cancelError) {
+            console.error("Could not cancel the Xendit session for this booking.", cancelError);
+            return {
+              ok: false,
+              message:
+                "The booking was cancelled, but Xendit could not close its checkout session.",
+            };
+          }
+        }
       }
-      return { ok: true };
     }
     return { ok: true };
   });
@@ -647,86 +661,110 @@ export const saveFloorPlan = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// ---------- Room payments (mock "Sandbox" online wallet) ----------
+// ---------- Xendit room payments ----------
 
-function sandboxReference(): string {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const bytes = crypto.getRandomValues(new Uint8Array(10));
-  return `SBX-${Array.from(bytes, (x) => alphabet[x % alphabet.length]).join("")}`;
-}
-
-/** Pays the remaining balance of an existing reservation through the Sandbox wallet. */
-export const paySandboxBalance = createServerFn({ method: "POST" })
+/** Creates a hosted checkout for the remaining balance; payment is applied by webhook only. */
+export const payXenditBalance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: number; mobile: string }) =>
-    z.object({ id: z.number().int().positive(), mobile: z.string().max(20) }).parse(d),
-  )
-  .handler(async ({ data, context }): Promise<Result<{ reference: string; amount: number }>> => {
-    const accountError = validateSandboxAccount(data.mobile);
-    if (accountError) return { ok: false, message: accountError };
-
-    // Check local room bookings first
-    const localR = localRoomBookings.find((x) => x.id === data.id);
-    if (localR && localR.user_id === context.userId) {
-      if (localR.payment_status === "paid")
-        return { ok: false, message: "This reservation is already paid in full." };
-      const amount = balanceDue(localR.amount_due, localR.amount_paid);
-      if (amount <= 0) return { ok: false, message: "This reservation is already paid in full." };
-      const reference = sandboxReference();
-      localR.payment_status = "paid";
-      localR.amount_paid = localR.amount_due;
-      localR.payment_reference = reference;
-      return { ok: true, reference, amount };
-    }
-
-    const { data: b } = await context.supabase
-      .from("room_bookings")
-      .select(
-        "id, user_id, check_in, check_out, status, payment_status, amount_due, amount_paid, rooms(price_per_night)",
-      )
-      .eq("id", data.id)
-      .maybeSingle();
-    if (!b || b.user_id !== context.userId) return { ok: false, message: "Reservation not found." };
-    if (!canPayOnline(b)) {
-      return {
-        ok: false,
-        message:
-          b.payment_status === "paid"
-            ? "This reservation is already paid in full."
-            : "This reservation can no longer be paid.",
-      };
-    }
-    const total =
-      Number(b.amount_due) > 0
-        ? Number(b.amount_due)
-        : roomTotal(Number((b as any).rooms?.price_per_night ?? 0), b.check_in, b.check_out);
-    const paidBefore = Number(b.amount_paid ?? 0);
-    const amount = balanceDue(total, paidBefore);
-    if (amount <= 0) return { ok: false, message: "This reservation is already paid in full." };
-    const reference = sandboxReference();
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: rows, error } = await supabaseAdmin
-      .from("room_bookings")
-      .update({
-        payment_method: "sandbox",
-        payment_status: "paid",
-        amount_due: total,
-        amount_paid: total,
-        payment_reference: reference,
-        paid_at: new Date().toISOString(),
-      })
-      .eq("id", b.id)
-      .eq("amount_paid", paidBefore)
-      .select("id");
-    if (error || !rows?.length) {
-      // If remote update fails, still grant payment in local store if present
-      if (localR) {
-        localR.payment_status = "paid";
-        localR.amount_paid = localR.amount_due;
-        localR.payment_reference = reference;
-        return { ok: true, reference, amount };
+  .inputValidator((d: { id: number }) => z.object({ id: z.number().int().positive() }).parse(d))
+  .handler(
+    async ({
+      data,
+      context,
+    }): Promise<Result<{ reference: string; amount: number; checkoutUrl: string }>> => {
+      const {
+        createPaymentTransaction,
+        findPendingPayment,
+        isUniqueViolation,
+        updatePaymentTransaction,
+      } = await import("./xendit-data.server");
+      const { createCheckout } = await import("./xendit.server");
+      const { data: b } = await context.supabase
+        .from("room_bookings")
+        .select(
+          "id, user_id, check_in, check_out, status, payment_status, amount_due, amount_paid, rooms(price_per_night)",
+        )
+        .eq("id", data.id)
+        .maybeSingle();
+      if (!b || b.user_id !== context.userId)
+        return { ok: false, message: "Reservation not found." };
+      if (!canPayOnline(b)) {
+        return {
+          ok: false,
+          message:
+            b.payment_status === "paid"
+              ? "This reservation is already paid in full."
+              : "This reservation can no longer be paid.",
+        };
       }
-      return { ok: false, message: "The payment could not be completed. You were not charged." };
-    }
-    return { ok: true, reference, amount };
-  });
+      const total =
+        Number(b.amount_due) > 0
+          ? Number(b.amount_due)
+          : roomTotal(Number((b as any).rooms?.price_per_night ?? 0), b.check_in, b.check_out);
+      const paidBefore = Number(b.amount_paid ?? 0);
+      const amount = balanceDue(total, paidBefore);
+      if (amount <= 0) return { ok: false, message: "This reservation is already paid in full." };
+
+      const activePayment = await findPendingPayment(b.id);
+      if (activePayment) {
+        return {
+          ok: false,
+          message:
+            "An online checkout is already in progress. Continue it or wait for it to expire.",
+        };
+      }
+
+      const reference = `room-${b.id}-${crypto.randomUUID()}`;
+      const { data: transaction, error: transactionError } = await createPaymentTransaction({
+        room_booking_id: b.id,
+        user_id: context.userId,
+        reference_id: reference,
+        purpose: "balance",
+        amount,
+        currency: "PHP",
+        status: "pending",
+      });
+      if (transactionError || !transaction) {
+        return {
+          ok: false,
+          message: isUniqueViolation(transactionError ?? { message: "" })
+            ? "An online checkout is already in progress."
+            : "Could not start the payment. Please try again.",
+        };
+      }
+
+      let sessionId: string | null = null;
+      try {
+        const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+        const session = await createCheckout(reference, amount, expiresAt);
+        sessionId = session.payment_session_id;
+        const { error: updateError } = await updatePaymentTransaction(transaction.id, {
+          payment_session_id: session.payment_session_id,
+          payment_link_url: session.payment_link_url ?? null,
+          expires_at: session.expires_at ?? expiresAt,
+        });
+        if (updateError) throw new Error("Could not save the Xendit checkout session.");
+        return {
+          ok: true,
+          reference,
+          amount,
+          checkoutUrl: session.payment_link_url!,
+        };
+      } catch (error) {
+        const { error: updateError } = await updatePaymentTransaction(transaction.id, {
+          status: "failed",
+        });
+        if (updateError) console.error("Could not mark failed Xendit setup.", updateError);
+        if (sessionId) {
+          try {
+            const { cancelCheckout } = await import("./xendit.server");
+            await cancelCheckout(sessionId);
+          } catch (cancelError) {
+            console.error("Could not cancel the orphaned Xendit checkout.", cancelError);
+          }
+        }
+        console.error("Could not create Xendit balance checkout.", error);
+        return { ok: false, message: "Could not start Xendit checkout. Please try again." };
+      }
+    },
+  );

@@ -147,7 +147,7 @@ export const getRoom = createServerFn({ method: "GET" })
     return r ? mapRoom(r) : null;
   });
 
-import { localRoomBookings, localVenueBookings } from "./bookings.functions";
+import { localVenueBookings } from "./bookings.functions";
 
 export const getVenueAvailability = createServerFn({ method: "GET" })
   .inputValidator((d: { id: number }) => z.object({ id: z.number().int().positive() }).parse(d))
@@ -184,11 +184,5 @@ export const getRoomAvailability = createServerFn({ method: "GET" })
     const sb = await db();
     const { data: busy } = await sb.rpc("room_busy_ranges", { _room_id: data.id });
     const remoteBusy = (busy ?? []).map((b) => ({ check_in: b.check_in, check_out: b.check_out }));
-    const localBusy = localRoomBookings
-      .filter((b) => b.room_id === data.id && b.status !== "cancelled" && b.status !== "rejected")
-      .map((b) => ({
-        check_in: b.check_in,
-        check_out: b.check_out,
-      }));
-    return { busy: [...remoteBusy, ...localBusy] };
+    return { busy: remoteBusy };
   });

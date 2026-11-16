@@ -4,10 +4,8 @@ import {
   balanceDue,
   canPayOnline,
   minimumDownpayment,
-  paymentStatusAfterClosing,
   paymentStatusFor,
   validateReservationPayment,
-  validateSandboxAccount,
 } from "@/lib/booking-rules";
 
 describe("room downpayment", () => {
@@ -42,14 +40,8 @@ describe("room downpayment", () => {
     expect(canPayOnline({ status: "cancelled", payment_status: "partial" })).toBe(false);
   });
 
-  it("refunds downpayments and full payments when a reservation closes", () => {
-    expect(paymentStatusAfterClosing("partial")).toBe("refunded");
-    expect(paymentStatusAfterClosing("paid")).toBe("refunded");
-    expect(paymentStatusAfterClosing("unpaid")).toBe("unpaid");
-  });
-
-  it("accepts an 11-digit Sandbox number starting with 09", () => {
-    expect(validateSandboxAccount("0917 123 4567")).toBeNull();
-    expect(validateSandboxAccount("12345")).not.toBeNull();
+  it("does not allow online payment for cancelled or rejected bookings", () => {
+    expect(canPayOnline({ status: "cancelled", payment_status: "partial" })).toBe(false);
+    expect(canPayOnline({ status: "rejected", payment_status: "partial" })).toBe(false);
   });
 });

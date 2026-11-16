@@ -10,24 +10,12 @@ import {
   LayoutGrid,
   Loader2,
   Plus,
-  ShieldCheck,
   Users,
   Utensils,
   Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,15 +28,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { FormMessage, PageIntro, PaymentBadge, StatusBadge } from "@/components/status-badge";
-import { cancelBooking, getMyBookings, paySandboxBalance } from "@/lib/bookings.functions";
-import {
-  balanceDue,
-  canPayOnline,
-  daysBetween,
-  formatDate,
-  formatPeso,
-  validateSandboxAccount,
-} from "@/lib/booking-rules";
+import { cancelBooking, getMyBookings, payXenditBalance } from "@/lib/bookings.functions";
+import { balanceDue, canPayOnline, daysBetween, formatDate, formatPeso } from "@/lib/booking-rules";
 
 const myBookingsQuery = (fn: () => ReturnType<typeof getMyBookings>) =>
   queryOptions({ queryKey: ["my-bookings"], queryFn: fn });
@@ -237,6 +218,17 @@ function MyBookingsPage() {
                         </span>
                       )}
                     </div>
+                    {b.latest_payment?.status === "pending" && (
+                      <div className="mt-3 rounded-lg bg-warning-soft px-3 py-2 text-sm text-warning">
+                        Xendit checkout is awaiting confirmation.
+                        {b.latest_payment.failure_code && (
+                          <span className="ml-1">
+                            The latest attempt failed ({b.latest_payment.failure_code}); you can
+                            retry in checkout.
+                          </span>
+                        )}
+                      </div>
+                    )}
                     {b.special_orders && (
                       <p className="mt-2 rounded-lg bg-muted px-3 py-2 text-sm">
                         {b.special_orders}
@@ -244,8 +236,14 @@ function MyBookingsPage() {
                     )}
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {canPayOnline(b) && balance > 0 && (
-                      <PayBalanceButton id={b.id} amount={balance} roomNumber={b.room_number} />
+                    {b.latest_payment?.status === "pending" &&
+                      b.latest_payment.payment_link_url && (
+                        <Button asChild variant="gold">
+                          <a href={b.latest_payment.payment_link_url}>Continue Xendit checkout</a>
+                        </Button>
+                      )}
+                    {canPayOnline(b) && balance > 0 && b.latest_payment?.status !== "pending" && (
+                      <PayBalanceButton id={b.id} amount={balance} />
                     )}
                     {active && <CancelButton onConfirm={() => doCancel("room", b.id)} />}
                   </div>
@@ -259,85 +257,39 @@ function MyBookingsPage() {
   );
 }
 
-function PayBalanceButton({
-  id,
-  amount,
-  roomNumber,
-}: {
-  id: number;
-  amount: number;
-  roomNumber: string;
-}) {
-  const pay = useServerFn(paySandboxBalance);
-  const qc = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [mobile, setMobile] = useState("");
+function PayBalanceButton({ id, amount }: { id: number; amount: number }) {
+  const pay = useServerFn(payXenditBalance);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const err = validateSandboxAccount(mobile);
-    if (err) return setError(err);
+  const submit = async () => {
     setError(null);
     setBusy(true);
     try {
-      const res = await pay({ data: { id, mobile } });
+      const res = await pay({ data: { id } });
       if (!res.ok) return setError(res.message);
-      toast.success(`Paid ${formatPeso(res.amount)} through Sandbox (ref ${res.reference}).`);
-      setOpen(false);
-      qc.invalidateQueries({ queryKey: ["my-bookings"] });
+      window.location.assign(res.checkoutUrl);
     } catch {
-      setError("Something went wrong. Please try again.");
+      const message = "Could not start Xendit checkout. Please try again.";
+      setError(message);
+      toast.error(message);
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="gold">
-          <Wallet /> Pay balance
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <form onSubmit={submit}>
-          <DialogHeader>
-            <DialogTitle>Settle Remaining Balance for Room {roomNumber}</DialogTitle>
-            <DialogDescription>
-              Complete payment for the remaining {formatPeso(amount)} after your initial 50%
-              downpayment. Authorized instantly via the Sandbox digital wallet simulation.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-5 space-y-2">
-            <Label htmlFor={`balance-mobile-${id}`}>Sandbox Wallet Mobile Number</Label>
-            <Input
-              id={`balance-mobile-${id}`}
-              inputMode="numeric"
-              placeholder="0917 123 4567"
-              value={mobile}
-              onChange={(e) => setMobile(e.target.value)}
-              maxLength={13}
-              className="h-11"
-            />
-            <p className="text-xs text-muted-foreground">
-              Demo Sandbox wallet: use any valid Philippine mobile starting with 09.
-            </p>
-          </div>
-          {error && (
-            <div className="mt-4">
-              <FormMessage tone="error">{error}</FormMessage>
-            </div>
-          )}
-          <DialogFooter className="mt-6">
-            <Button type="submit" variant="gold" disabled={busy}>
-              {busy && <Loader2 className="animate-spin" />} Pay {formatPeso(amount)}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <div>
+      <Button type="button" variant="gold" disabled={busy} onClick={submit}>
+        {busy ? <Loader2 className="animate-spin" /> : <Wallet />}
+        Pay {formatPeso(amount)} via Xendit
+      </Button>
+      {error && (
+        <div className="mt-2">
+          <FormMessage tone="error">{error}</FormMessage>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -356,7 +308,8 @@ function CancelButton({ onConfirm }: { onConfirm: () => void }) {
         <AlertDialogHeader>
           <AlertDialogTitle>Cancel this booking?</AlertDialogTitle>
           <AlertDialogDescription>
-            The dates will be released for other guests. This cannot be undone.
+            The dates will be released for other guests. Cancellation does not issue a refund;
+            contact the administrator about any payment already received.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
